@@ -1,0 +1,39 @@
+.card {
+	background: var(--card-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 12px;
+	padding: 1rem;
+	color: var(--fg);
+}
+
+.title {
+	margin: 0 0 0.5rem 0;
+	font-size: 1.25rem;
+	font-weight: 700;
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.5rem 1rem;
+}
+
+.label { color: var(--muted); }
+.value { color: var(--fg); }
+
+.claims {
+	margin-top: 1rem;
+	border-top: 1px solid var(--card-border);
+	padding-top: 1rem;
+}
+
+.pre {
+	background: #0b1020;
+	border: 1px solid var(--card-border);
+	border-radius: 8px;
+	padding: 0.75rem;
+	overflow: auto;
+	max-height: 240px;
+}
+
+
