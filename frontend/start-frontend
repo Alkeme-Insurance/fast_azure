@@ -1,0 +1,2 @@
+cd /home/jharris/workspace/fast_azure/frontend
+npm install --no-audit --no-fund && npm run dev
