@@ -1,0 +1,56 @@
+#! /bin/bash
+set -euo pipefail
+
+APP_NAME=fast-azure-local
+REDIRECT_URI=http://localhost:8000/auth/callback
+
+# az ad app create \
+#   --display-name "$APP_NAME" \
+#   --sign-in-audience AzureADMyOrg \
+#   --web-redirect-uris $REDIRECT_URI
+
+# Capture identifiers
+APP_ID=$(az ad app list --display-name "$APP_NAME" --query '[0].appId' -o tsv)
+TENANT_ID=$(az account show --query tenantId -o tsv)
+
+# Enable ID/Access tokens for auth code flow
+# az ad app update --id "$APP_ID" \
+#   --enable-id-token-issuance true \
+#   --enable-access-token-issuance true
+
+# Optional: create a client secret for local backend flow
+CLIENT_SECRET=$(az ad app credential reset --id "$APP_ID" --append --display-name "local-dev" -o tsv | tail -n1)
+echo "APP_ID=$APP_ID"
+echo "TENANT_ID=$TENANT_ID"
+echo "CLIENT_SECRET=$CLIENT_SECRET"
+export APP_ID=$APP_ID
+export TENANT_ID=$TENANT_ID
+export CLIENT_SECRET=$CLIENT_SECRET
+export AZURE_TENANT_ID=$TENANT_ID
+export AZURE_CLIENT_ID=$APP_ID
+export AZURE_CLIENT_SECRET=$CLIENT_SECRET     # if using backend code flow
+export OIDC_ISSUER="https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0"
+export OIDC_AUTH_URL="${OIDC_ISSUER}/oauth2/v2.0/authorize"
+export OIDC_TOKEN_URL="${OIDC_ISSUER}/oauth2/v2.0/token"
+export OIDC_JWKS_URL="${OIDC_ISSUER}/discovery/v2.0/keys"
+export OIDC_SCOPES="openid profile email offline_access"
+export OIDC_REDIRECT_URI="http://localhost:8000/auth/callback"
+export OBJECT_ID=$(az ad app show --id "$APP_ID" --query id -o tsv)
+export APP_ID_URI="api://${APP_ID}"
+export SCOPE_ID=$(uuidgen)
+echo "APP_ID=$APP_ID" >> .env
+echo "AZURE_TENANT_ID=$AZURE_TENANT_ID" >> .env
+echo "AZURE_CLIENT_ID=$AZURE_CLIENT_ID" >> .env
+echo "AZURE_CLIENT_SECRET=$AZURE_CLIENT_SECRET" >> .env
+echo "TENANT_ID=$TENANT_ID" >> .env
+echo "CLIENT_SECRET=$CLIENT_SECRET" >> .env
+echo "OBJECT_ID=$OBJECT_ID" >> .env
+echo "APP_ID_URI=$APP_ID_URI" >> .env
+echo "OIDC_ISSUER=$OIDC_ISSUER" >> .env
+echo "OIDC_AUTH_URL=$OIDC_AUTH_URL" >> .env
+echo "OIDC_TOKEN_URL=$OIDC_TOKEN_URL" >> .env
+echo "OIDC_JWKS_URL=$OIDC_JWKS_URL" >> .env
+echo "OIDC_SCOPES=$OIDC_SCOPES" >> .env
+echo "OIDC_REDIRECT_URI=$OIDC_REDIRECT_URI" >> .env
+echo "OBJECT_ID=$OBJECT_ID" >> .env
+echo "SCOPE_ID=$SCOPE_ID" >> .env
