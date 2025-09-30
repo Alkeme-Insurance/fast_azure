@@ -6,8 +6,18 @@ from .routers import items, users
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-from app.auth import azure_scheme
-from app.config import settings
+from backend.auth import azure_scheme
+from backend.config import settings
+from backend.clients.mongo_db import mongo_lifespan
+from backend.utils.seed import seed_initial_data
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    async with mongo_lifespan():
+        await azure_scheme.openid_config.load_config()
+        await seed_initial_data()
+        yield
+
 
 app = FastAPI(
     dependencies=[Security(azure_scheme)],
@@ -16,17 +26,13 @@ app = FastAPI(
         'usePkceWithAuthorizationCodeGrant': True,
         'clientId': settings.OPENAPI_CLIENT_ID,
         'scopes': settings.SCOPE_NAME,
-    })
+    },
+    lifespan=lifespan,
+)
 
  
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Load OpenID config on startup.
-    """
-    await azure_scheme.openid_config.load_config()
-    yield
+ 
 
 
 app.include_router(users.router)

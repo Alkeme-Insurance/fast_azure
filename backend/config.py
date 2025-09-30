@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     CLIENT_SECRET: str | None = Field(default=None, alias="CLIENT_SECRET")
     OIDC_REDIRECT_URI: str | None = Field(default=None, alias="OIDC_REDIRECT_URI")
     APP_ID: str = Field(alias="APP_ID")
+    MONGODB_URI: str = Field(default="mongodb://localhost:27017", alias="MONGODB_URI")
 
     @computed_field
     @property

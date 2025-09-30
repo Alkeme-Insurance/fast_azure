@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..dependencies import get_token_header
+from backend.services import item_service
 
 router = APIRouter(
     prefix="/items",
@@ -9,19 +10,17 @@ router = APIRouter(
 )
 
 
-fake_items_db = {"plumbus": {"name": "Plumbus"}, "gun": {"name": "Portal Gun"}}
-
-
 @router.get("/")
 async def read_items():
-    return fake_items_db
+    return await item_service.list_items_mapping()
 
 
 @router.get("/{item_id}")
 async def read_item(item_id: str):
-    if item_id not in fake_items_db:
+    name = await item_service.get_item_name_by_slug(item_id)
+    if not name:
         raise HTTPException(status_code=404, detail="Item not found")
-    return {"name": fake_items_db[item_id]["name"], "item_id": item_id}
+    return {"name": name, "item_id": item_id}
 
 
 @router.put(
@@ -34,4 +33,5 @@ async def update_item(item_id: str):
         raise HTTPException(
             status_code=403, detail="You can only update the item: plumbus"
         )
+    updated = await item_service.update_item_name_by_slug("plumbus", "The great Plumbus")
     return {"item_id": item_id, "name": "The great Plumbus"}

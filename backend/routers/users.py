@@ -1,11 +1,12 @@
 from fastapi import APIRouter
+from backend.services import user_service
 
 router = APIRouter()
 
 
 @router.get("/users/", tags=["users"], responses={404: {"description": "Not found"}},)
 async def read_users():
-    return [{"username": "Rick"}, {"username": "Morty"}]
+    return await user_service.list_usernames()
 
 
 @router.get("/users/me", tags=["users"])
