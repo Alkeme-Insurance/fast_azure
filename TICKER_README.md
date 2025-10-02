@@ -2,6 +2,8 @@
 
 A production-ready stock-ticker style metrics bar for project tracking, built with React + TypeScript + Tailwind.
 
+**📊 For detailed metric formulas and calculations**, see [METRICS_MODEL.md](../METRICS_MODEL.md)
+
 ## Features
 
 - **Stock-ticker style horizontal scrolling bar** with auto-scroll and pause-on-hover
@@ -167,13 +169,13 @@ Pure SVG sparkline chart.
 ```typescript
 interface ProjectTickerDatum {
   projectId: string;
-  symbol: string;      // e.g., "ECP"
+  symbol: string;      // e.g., "ECP" (3-letter abbreviation)
   name: string;        // "E-Commerce Platform"
-  profit: number;      // Latest daily profit in $
-  margin: number;      // 0..1 (e.g., 0.31 = 31%)
-  timeSavedHrs: number;
-  prs?: number;        // Pull requests
-  appEvents?: number;  // Application events
+  profit: number;      // Daily profit ($) = Revenue - Cost
+  margin: number;      // Profit margin (0..1, e.g., 0.31 = 31%)
+  timeSavedHrs: number; // baseline_hours - actual_hours
+  prs?: number;        // Pull requests (dev signal component)
+  appEvents?: number;  // Application events (ops signal component)
   indexSeries: number[]; // 30 points, normalized to base=100
 }
 
@@ -186,6 +188,98 @@ interface TickerDelta {
   appEvents?: number;
   indexPoint?: number; // New point to append to series
 }
+```
+
+## Metric Calculations
+
+The ticker displays derived metrics calculated using these formulas:
+
+### 1. Profit (Daily)
+```
+Profit = Revenue - Cost
+
+Where:
+  Revenue = billable_hours × billable_rate
+  Cost = (actual_hours × cost_rate) + fixed_costs
+```
+
+### 2. Profit Margin
+```
+Margin = Profit / Revenue
+```
+Displayed as percentage (e.g., 31%).
+
+### 3. Time Saved
+```
+Time Saved = baseline_hours - actual_hours
+
+Where:
+  baseline_hours = historical mean or "before" estimate
+  actual_hours = manual_hours + automated_hours
+```
+
+### 4. Signals (Throughput Proxy)
+```
+total_signals = dev_signal + ops_signal
+
+Where:
+  dev_signal = w₁×PRs + w₂×commits + w₃×lead_time_improvement + w₄×cycle_time_improvement
+  ops_signal = app_usage_events
+```
+Default weights: w₁=3, w₂=1, w₃=5, w₄=5
+
+Displayed as: `PR:5 • App:12`
+
+### 5. Index Series
+```
+indexSeries = toIndexSeries(<chosen metric>)
+```
+Normalizes any daily or cumulative metric to baseline=100 for trend visualization.
+
+Color-coded:
+- **Green**: Current index > baseline (100)
+- **Red**: Current index < baseline (100)
+
+### Backend Calculation Example
+
+```python
+# Calculate daily metrics for a project
+def calculate_project_metrics(project, date):
+    # Revenue
+    billable_hours = project.get_billable_hours(date)
+    billable_rate = project.billable_rate
+    revenue = billable_hours * billable_rate
+    
+    # Cost
+    actual_hours = project.get_actual_hours(date)
+    cost_rate = project.cost_rate
+    fixed_costs = project.daily_fixed_costs
+    cost = (actual_hours * cost_rate) + fixed_costs
+    
+    # Profit & Margin
+    profit = revenue - cost
+    margin = profit / revenue if revenue > 0 else 0
+    
+    # Time Saved
+    baseline_hours = project.get_baseline_hours(date)
+    time_saved = baseline_hours - actual_hours
+    
+    # Signals
+    prs = project.get_pr_count(date)
+    app_events = project.get_app_events(date)
+    
+    # Index (last 30 days)
+    historical_profit = project.get_profit_series(days=30)
+    index_series = to_index_series(historical_profit, baseline=100)
+    
+    return {
+        "profit": profit,
+        "margin": margin,
+        "timeSavedHrs": time_saved,
+        "prs": prs,
+        "appEvents": app_events,
+        "indexSeries": index_series
+    }
 ```
 
 ## Responsive Behavior

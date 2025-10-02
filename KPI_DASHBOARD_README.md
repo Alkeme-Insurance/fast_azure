@@ -2,13 +2,25 @@
 
 A comprehensive KPI visualization dashboard built with React + TypeScript + Tailwind CSS and pure SVG charts (no external chart libraries).
 
+**📊 For detailed metric formulas and calculations**, see [METRICS_MODEL.md](../METRICS_MODEL.md)
+
 ## Features
 
 ### 1. **Multi-Metric Support**
-- **Index**: Project performance index (baseline 100)
-- **Profit/Day**: Daily profit calculations (derived from index changes)
-- **Time Saved**: Hours saved per project
-- **Signals**: Combined PR and app event metrics
+
+All metrics use defensible, auditable formulas:
+
+- **Index**: Project performance index (baseline 100) - normalized view of any chosen metric
+- **Profit/Day**: Daily profit = Revenue - Cost
+  - Revenue = billable_hours × billable_rate
+  - Cost = (actual_hours × cost_rate) + fixed_costs (infra, licenses)
+- **Profit Margin**: Profit / Revenue (displayed as percentage)
+- **Time Saved**: baseline_hours - actual_hours
+  - baseline_hours = "before" estimate or historical mean
+  - actual_hours = manual_hours + automated_hours
+- **Signals**: Weighted throughput proxy from development and operations
+  - dev_signal = w₁×PRs + w₂×commits + w₃×lead_time_improvement + w₄×cycle_time_improvement
+  - ops_signal = app_usage_events (form submissions, jobs, runs)
 
 ### 2. **Timeframe Filtering**
 - 7 days
@@ -166,16 +178,95 @@ fmtPct(p: number): string
 fmtNumber(n: number): string
 ```
 
-## Metric Transformations
+## Metric Formulas & Calculations
 
-Each metric uses the same 30-point `indexSeries` but transforms it differently:
+### Core Formulas
 
-- **Index**: Direct use of `indexSeries`
-- **Profit**: Daily deltas scaled by project profit
-- **Time**: Flat distribution of `timeSavedHrs` across points
-- **Signals**: Flat value from `(prs + appEvents)`
+#### 1. Revenue
+```
+Revenue = billable_hours × billable_rate
+```
+- `billable_hours`: Hours billed to client or stakeholder
+- `billable_rate`: Hourly rate ($)
 
-These are placeholders until real time-series data is available from the backend.
+#### 2. Cost
+```
+Cost = (actual_hours × cost_rate) + fixed_costs
+```
+- `actual_hours`: Total time spent (manual + automated)
+- `cost_rate`: Internal hourly cost ($/hour)
+- `fixed_costs`: Infrastructure, licenses, tools
+
+#### 3. Profit (Daily or Cumulative)
+```
+Profit = Revenue - Cost
+```
+This is the primary value metric.
+
+#### 4. Profit Margin
+```
+Margin = Profit / Revenue
+```
+Displayed as percentage (e.g., 0.31 = 31%).
+
+#### 5. Time Saved
+```
+Time Saved = baseline_hours - actual_hours
+```
+- `baseline_hours`: Historical mean or "before" estimate
+- `actual_hours`: Actual time spent
+
+#### 6. Automation Lift (Optional)
+```
+Automation Lift = time_saved / baseline_hours
+```
+Percentage improvement from automation.
+
+#### 7. Development Signal
+```
+dev_signal = w₁×PRs + w₂×commits + w₃×lead_time_improvement + w₄×cycle_time_improvement
+```
+Default weights: w₁=3, w₂=1, w₃=5, w₄=5
+
+#### 8. Operations Signal
+```
+ops_signal = app_usage_events
+```
+Count of: form submissions, job runs, API calls, etc.
+
+#### 9. Combined Signals
+```
+total_signals = dev_signal + ops_signal
+```
+
+#### 10. Index Series
+```
+indexSeries = toIndexSeries(<chosen metric>)
+```
+Normalizes any metric to baseline=100 for trend visualization.
+
+### Aggregation Across Projects
+
+When viewing multiple projects:
+
+```
+Total Revenue = Σ(project_revenue)
+Total Cost = Σ(project_cost)
+Total Profit = Total Revenue - Total Cost
+Overall Margin = Total Profit / Total Revenue
+Total Time Saved = Σ(project_time_saved)
+```
+
+### Current Implementation (Mock Data)
+
+The dashboard currently uses placeholder transformations:
+
+- **Index**: Direct use of `indexSeries` (30-point series)
+- **Profit**: Daily deltas derived from index changes × project profit
+- **Time**: Flat distribution of `timeSavedHrs` across time points
+- **Signals**: Sum of `(prs + appEvents)` spread across points
+
+**Note**: Replace with real time-series data from backend for production use.
 
 ## Styling
 

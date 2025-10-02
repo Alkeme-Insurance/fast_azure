@@ -103,6 +103,7 @@ VITE_DEV_NO_AUTH=false
 
 - **[DOCKER_SETUP.md](./DOCKER_SETUP.md)** - Complete Docker configuration guide
 - **[AZURE_AD_SETUP.md](./AZURE_AD_SETUP.md)** - Azure AD authentication setup
+- **[METRICS_MODEL.md](./METRICS_MODEL.md)** - Metrics formulas and calculations (Revenue, Cost, Profit, etc.)
 - **[TICKER_README.md](./TICKER_README.md)** - Stock ticker feature documentation
 - **[KPI_DASHBOARD_README.md](./KPI_DASHBOARD_README.md)** - KPI Dashboard guide
 
