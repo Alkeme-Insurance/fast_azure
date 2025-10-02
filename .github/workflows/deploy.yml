@@ -14,7 +14,7 @@ env:
   RESOURCE_GROUP: fastazure-rg
   AKS_CLUSTER: fastazure-dev-aks
   ACR_NAME: fastazuredevacr
-  KEY_VAULT_NAME: fastazure-dev-kv-abc123xyz  # Replace with your Key Vault name
+  # Note: KEY_VAULT_NAME will be retrieved dynamically from Azure
 
 jobs:
   build-and-deploy:
@@ -31,11 +31,16 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Get ACR Login Server
+      - name: Get ACR Login Server and Key Vault Name
         id: acr
         run: |
           ACR_LOGIN_SERVER=$(az acr show --name ${{ env.ACR_NAME }} --query loginServer -o tsv)
           echo "login_server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+          
+          # Get Key Vault name from resource group
+          KEY_VAULT_NAME=$(az keyvault list --resource-group ${{ env.RESOURCE_GROUP }} --query "[0].name" -o tsv)
+          echo "key_vault_name=$KEY_VAULT_NAME" >> $GITHUB_OUTPUT
+          echo "Key Vault: $KEY_VAULT_NAME"
 
       - name: Build and Push Backend Image
         run: |
@@ -48,11 +53,7 @@ jobs:
 
       - name: Build and Push Frontend Image
         run: |
-          # Get secrets from Key Vault for build-time env vars
-          AZURE_CLIENT_ID=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-client-id --query value -o tsv || echo "")
-          AZURE_TENANT_ID=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-tenant-id --query value -o tsv || echo "")
-          AZURE_API_SCOPE=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-api-scope --query value -o tsv || echo "")
-          
+          # Use GitHub secrets for build-time env vars
           # Build with ACR (supports build args)
           az acr build \
             --registry ${{ env.ACR_NAME }} \
@@ -60,9 +61,9 @@ jobs:
             --image fastazure-frontend:latest \
             --file frontend/Dockerfile \
             --build-arg VITE_API_BASE_URL=http://backend-service:8000 \
-            --build-arg VITE_AZURE_CLIENT_ID="$AZURE_CLIENT_ID" \
-            --build-arg VITE_AZURE_TENANT_ID="$AZURE_TENANT_ID" \
-            --build-arg VITE_AZURE_API_SCOPE="$AZURE_API_SCOPE" \
+            --build-arg VITE_AZURE_CLIENT_ID="${{ secrets.VITE_AZURE_CLIENT_ID }}" \
+            --build-arg VITE_AZURE_TENANT_ID="${{ secrets.VITE_AZURE_TENANT_ID }}" \
+            --build-arg VITE_AZURE_API_SCOPE="${{ secrets.VITE_AZURE_API_SCOPE }}" \
             --build-arg VITE_DEV_NO_AUTH=false \
             .
 
@@ -75,22 +76,21 @@ jobs:
 
       - name: Create/Update Kubernetes Secrets
         run: |
-          # Get secrets from Key Vault
-          MONGODB_URI=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name mongodb-uri --query value -o tsv)
-          AZURE_CLIENT_ID=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-client-id --query value -o tsv || echo "")
-          AZURE_TENANT_ID=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-tenant-id --query value -o tsv || echo "")
-          AZURE_API_SCOPE=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-api-scope --query value -o tsv || echo "")
+          KEY_VAULT_NAME="${{ steps.acr.outputs.key_vault_name }}"
+          
+          # Get MongoDB URI from Key Vault
+          MONGODB_URI=$(az keyvault secret show --vault-name $KEY_VAULT_NAME --name mongodb-uri --query value -o tsv)
           
           # Delete existing secret if it exists
           kubectl delete secret fastazure-secrets -n fastazure --ignore-not-found=true
           
-          # Create Kubernetes secret
+          # Create Kubernetes secret with MongoDB URI and Azure AD credentials from GitHub secrets
           kubectl create secret generic fastazure-secrets \
             --namespace=fastazure \
             --from-literal=mongodb-uri="$MONGODB_URI" \
-            ${AZURE_CLIENT_ID:+--from-literal=azure-client-id="$AZURE_CLIENT_ID"} \
-            ${AZURE_TENANT_ID:+--from-literal=azure-tenant-id="$AZURE_TENANT_ID"} \
-            ${AZURE_API_SCOPE:+--from-literal=azure-api-scope="$AZURE_API_SCOPE"}
+            --from-literal=azure-client-id="${{ secrets.VITE_AZURE_CLIENT_ID }}" \
+            --from-literal=azure-tenant-id="${{ secrets.VITE_AZURE_TENANT_ID }}" \
+            --from-literal=azure-api-scope="${{ secrets.VITE_AZURE_API_SCOPE }}"
 
       - name: Update Kubernetes Deployments
         run: |
