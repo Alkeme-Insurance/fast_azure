@@ -48,7 +48,9 @@ make build
 make up
 ```
 
-### Option 3: Local Development (without Docker)
+### Option 3: Local Development (Fastest, without Docker)
+
+For rapid development with hot-reload:
 
 ```bash
 # Terminal 1: Start MongoDB
@@ -63,13 +65,22 @@ uv run uvicorn backend.main:app --reload
 cd frontend
 npm install
 npm run dev
+
+# Open http://localhost:5173
 ```
+
+**📖 For detailed local development guide**, see [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md)
 
 ## 🌐 Access URLs
 
-Once running, access the application at:
-
+### Docker (Production-like)
 - **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **MongoDB**: localhost:27017
+
+### Local Development
+- **Frontend**: http://localhost:5173 (Vite dev server)
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
 - **MongoDB**: localhost:27017
@@ -101,8 +112,16 @@ VITE_DEV_NO_AUTH=false
 
 ## 📚 Documentation
 
+### Getting Started
+- **[QUICK_START.md](./QUICK_START.md)** - ⚡ **5-minute setup** for local development
+- **[LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md)** - 🔥 Detailed local development workflow
+- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Common issues and solutions
+
+### Configuration & Deployment
 - **[DOCKER_SETUP.md](./DOCKER_SETUP.md)** - Complete Docker configuration guide
 - **[AZURE_AD_SETUP.md](./AZURE_AD_SETUP.md)** - Azure AD authentication setup
+
+### Features & Metrics
 - **[METRICS_MODEL.md](./METRICS_MODEL.md)** - Metrics formulas and calculations (Revenue, Cost, Profit, etc.)
 - **[TICKER_README.md](./TICKER_README.md)** - Stock ticker feature documentation
 - **[KPI_DASHBOARD_README.md](./KPI_DASHBOARD_README.md)** - KPI Dashboard guide
