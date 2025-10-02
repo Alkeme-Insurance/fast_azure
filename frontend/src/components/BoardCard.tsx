@@ -15,7 +15,10 @@ interface Props {
 }
 
 export default function BoardCard({ card }: Props) {
-	const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: card.id });
+	const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ 
+		id: card.id,
+		data: card
+	});
 	const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
 	
 	const completedChecklist = card.checklist?.filter(item => item.completed).length ?? 0;
@@ -28,90 +31,195 @@ export default function BoardCard({ card }: Props) {
 	return (
 		<div
 			ref={setNodeRef}
-			style={style}
+			style={{
+				...style,
+				width: '100%',
+				minHeight: '80px',
+				backgroundColor: isDragging ? '#f0f9ff' : '#eff6ff',
+				borderRadius: '8px',
+				padding: '10px 12px',
+				border: isDragging ? '2px dashed #3b82f6' : '1px solid #bfdbfe',
+				cursor: isDragging ? 'grabbing' : 'grab',
+				boxShadow: isDragging ? '0 8px 24px rgba(59, 130, 246, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.08)',
+				opacity: isDragging ? 0.5 : 1,
+				transform: style?.transform,
+				transition: isDragging ? 'none' : 'all 0.15s ease',
+				marginBottom: '8px',
+				position: 'relative',
+				zIndex: isDragging ? 1000 : 1
+			}}
 			{...attributes}
 			{...listeners}
-			className={`w-full min-h-[60px] cursor-grab rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all duration-150 outline-none hover:shadow-md hover:border-gray-300 focus:ring-2 focus:ring-blue-500 active:cursor-grabbing ${
-				isDragging ? 'opacity-60 shadow-lg ring-2 ring-blue-400' : ''
-			}`}
 		>
-			{/* Header: Title */}
-			<div className="text-sm font-semibold text-gray-900 leading-tight mb-1">{card.title}</div>
+			{/* Title - Bold and prominent */}
+			<div style={{ 
+				fontSize: '14px', 
+				fontWeight: 700, 
+				color: '#1e293b',
+				lineHeight: '1.3',
+				marginBottom: '8px',
+				wordBreak: 'break-word'
+			}}>
+				{card.title}
+			</div>
 			
-			{/* Badges Row - Quick Indicators */}
-			{(card.labels?.length || card.dueDate || hasChecklist || card.attachmentCount || card.commentCount) && (
-				<div className="flex flex-wrap items-center gap-2">
-					{/* Labels - Colored Pills */}
-					{card.labels && card.labels.length > 0 && (
-						<>
-							{card.labels.map((label, idx) => (
-								<span
-									key={idx}
-									className="inline-block h-2.5 w-8 rounded-full"
-									style={{ backgroundColor: label.color }}
-									title={label.name}
-								/>
-							))}
-						</>
-					)}
-					
-					{/* Due Date Icon */}
+			{/* Labels - Colored chips in a row */}
+			{card.labels && card.labels.length > 0 && (
+				<div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+					{card.labels.map((label, idx) => (
+						<span
+							key={idx}
+							style={{
+								display: 'inline-block',
+								padding: '2px 8px',
+								fontSize: '10px',
+								fontWeight: 600,
+								color: '#fff',
+								backgroundColor: label.color,
+								borderRadius: '4px',
+								textTransform: 'uppercase',
+								letterSpacing: '0.3px'
+							}}
+							title={label.name}
+						>
+							{label.name}
+						</span>
+					))}
+				</div>
+			)}
+			
+			{/* Description preview (optional) */}
+			{card.description && (
+				<p style={{
+					fontSize: '12px',
+					color: '#64748b',
+					lineHeight: '1.4',
+					marginBottom: '8px',
+					overflow: 'hidden',
+					textOverflow: 'ellipsis',
+					display: '-webkit-box',
+					WebkitLineClamp: 2,
+					WebkitBoxOrient: 'vertical'
+				}}>
+					{card.description}
+				</p>
+			)}
+			
+			{/* Status badges row */}
+			{(card.dueDate || hasChecklist || card.attachmentCount || card.commentCount) && (
+				<div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+					{/* Due Date */}
 					{card.dueDate && (
-						<span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${
-							isOverdue 
-								? 'bg-red-50 text-red-700'
-								: isDueSoon 
-								? 'bg-orange-50 text-orange-700'
-								: 'bg-gray-100 text-gray-700'
-						}`} title={`Due ${new Date(card.dueDate).toLocaleDateString()}`}>
+						<span style={{
+							display: 'inline-flex',
+							alignItems: 'center',
+							gap: '3px',
+							padding: '3px 7px',
+							fontSize: '11px',
+							fontWeight: 500,
+							borderRadius: '4px',
+							backgroundColor: isOverdue ? '#fee2e2' : isDueSoon ? '#fed7aa' : '#f3f4f6',
+							color: isOverdue ? '#991b1b' : isDueSoon ? '#9a3412' : '#374151'
+						}} title={`Due ${new Date(card.dueDate).toLocaleDateString()}`}>
 							📅 {new Date(card.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
 						</span>
 					)}
 					
-					{/* Checklist Progress Icon */}
+					{/* Checklist Progress */}
 					{hasChecklist && (
-						<span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${
-							completedChecklist === totalChecklist ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-700'
-						}`} title={`${completedChecklist}/${totalChecklist} completed`}>
+						<span style={{
+							display: 'inline-flex',
+							alignItems: 'center',
+							gap: '3px',
+							padding: '3px 7px',
+							fontSize: '11px',
+							fontWeight: 500,
+							borderRadius: '4px',
+							backgroundColor: completedChecklist === totalChecklist ? '#d1fae5' : '#f3f4f6',
+							color: completedChecklist === totalChecklist ? '#065f46' : '#374151'
+						}} title={`${completedChecklist}/${totalChecklist} completed`}>
 							{completedChecklist === totalChecklist ? '✓' : '☐'} {completedChecklist}/{totalChecklist}
 						</span>
 					)}
 					
-					{/* Attachments Icon */}
+					{/* Attachments */}
 					{card.attachmentCount && card.attachmentCount > 0 && (
-						<span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-700" title={`${card.attachmentCount} attachments`}>
+						<span style={{
+							display: 'inline-flex',
+							alignItems: 'center',
+							gap: '3px',
+							padding: '3px 7px',
+							fontSize: '11px',
+							fontWeight: 500,
+							borderRadius: '4px',
+							backgroundColor: '#f3f4f6',
+							color: '#374151'
+						}} title={`${card.attachmentCount} attachments`}>
 							📎 {card.attachmentCount}
 						</span>
 					)}
 					
-					{/* Comments Icon */}
+					{/* Comments */}
 					{card.commentCount && card.commentCount > 0 && (
-						<span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-700" title={`${card.commentCount} comments`}>
+						<span style={{
+							display: 'inline-flex',
+							alignItems: 'center',
+							gap: '3px',
+							padding: '3px 7px',
+							fontSize: '11px',
+							fontWeight: 500,
+							borderRadius: '4px',
+							backgroundColor: '#f3f4f6',
+							color: '#374151'
+						}} title={`${card.commentCount} comments`}>
 							💬 {card.commentCount}
 						</span>
 					)}
 				</div>
 			)}
 			
-			{/* Body: Description Preview (Optional) */}
-			{card.description && (
-				<p className="mt-2 line-clamp-1 text-xs text-gray-500">{card.description}</p>
-			)}
-			
-			{/* Assignees - Circular Avatars */}
+			{/* Assignees - Small circular avatars */}
 			{card.assignees && card.assignees.length > 0 && (
-				<div className="mt-2 flex -space-x-1.5">
+				<div style={{ display: 'flex', marginLeft: '-2px' }}>
 					{card.assignees.slice(0, 3).map((assignee, idx) => (
 						<div
 							key={idx}
-							className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-[10px] font-semibold text-white ring-1 ring-white"
+							style={{
+								display: 'inline-flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								width: '22px',
+								height: '22px',
+								borderRadius: '50%',
+								backgroundColor: '#3b82f6',
+								color: '#fff',
+								fontSize: '10px',
+								fontWeight: 600,
+								border: '2px solid #eff6ff',
+								marginLeft: idx > 0 ? '-6px' : '0',
+								zIndex: 10 - idx
+							}}
 							title={assignee}
 						>
 							{assignee.charAt(0).toUpperCase()}
 						</div>
 					))}
 					{card.assignees.length > 3 && (
-						<div className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 text-[10px] font-semibold text-gray-700 ring-1 ring-white" title={`+${card.assignees.length - 3} more`}>
+						<div style={{
+							display: 'inline-flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							width: '22px',
+							height: '22px',
+							borderRadius: '50%',
+							backgroundColor: '#94a3b8',
+							color: '#fff',
+							fontSize: '9px',
+							fontWeight: 600,
+							border: '2px solid #eff6ff',
+							marginLeft: '-6px',
+							zIndex: 7
+						}} title={`+${card.assignees.length - 3} more`}>
 							+{card.assignees.length - 3}
 						</div>
 					)}

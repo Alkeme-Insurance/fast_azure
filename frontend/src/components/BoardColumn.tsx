@@ -179,9 +179,11 @@ export default function BoardColumn({ column, cards, onRename, onDelete }: Props
 					flexDirection: 'column',
 					gap: '8px',
 					minHeight: '100px',
-					backgroundColor: isOver ? '#eff6ff' : 'transparent',
-					borderRadius: isOver ? '4px' : '0',
-					transition: 'background-color 0.15s ease'
+					backgroundColor: isOver ? '#dbeafe' : 'transparent',
+					borderRadius: '6px',
+					border: isOver ? '2px dashed #3b82f6' : '2px dashed transparent',
+					transition: 'all 0.2s ease',
+					position: 'relative'
 				}}
 			>
 				{cards.map((c) => (

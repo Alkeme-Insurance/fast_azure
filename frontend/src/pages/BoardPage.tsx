@@ -164,14 +164,14 @@ export default function BoardPage({ boardId }: Props) {
 	if (!board) return <div className="p-4 text-sm text-gray-600">No board</div>;
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '1rem', padding: '1rem', height: 'calc(100vh - 4rem)', overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '350px auto', gap: '1rem', padding: '1rem', height: 'calc(100vh - 4rem)', overflow: 'hidden', maxWidth: '100vw' }}>
 			{/* Project Panel */}
 			<div style={{ overflow: 'hidden' }}>
 				<ProjectDetailPanel project={project} loading={projectLoading} />
 			</div>
 
 			{/* Board Panel */}
-			<div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+			<div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
 				<section className={`${styles.panel} flex h-full flex-col`}>
 				<div className={styles.header}>
                     <h2 className="text-base font-semibold text-gray-900">{board.name}</h2>
