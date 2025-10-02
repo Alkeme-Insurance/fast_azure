@@ -3,6 +3,8 @@ from fastapi import FastAPI, Security
 from .dependencies import get_query_token, get_token_header
 from .internals import admin
 from .routers import items, users
+from backend.routers import projects as projects_router
+from backend.routers import kanban as kanban_router
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -10,12 +12,14 @@ from backend.auth import azure_scheme
 from backend.config import settings
 from backend.clients.mongo_db import mongo_lifespan
 from backend.utils.seed import seed_initial_data
+from backend.utils.indexes import ensure_indexes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async with mongo_lifespan():
         await azure_scheme.openid_config.load_config()
         await seed_initial_data()
+        await ensure_indexes()
         yield
 
 
@@ -37,6 +41,8 @@ app = FastAPI(
 
 app.include_router(users.router)
 app.include_router(items.router)
+app.include_router(projects_router.router)
+app.include_router(kanban_router.router)
 app.include_router(
     admin.router,
     prefix="/admin",

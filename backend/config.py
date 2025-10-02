@@ -3,7 +3,13 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = ['http://localhost:8000']
+    #Update this to load from env
+    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = [
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+    ]
     OPENAPI_CLIENT_ID: str = ""
     AZURE_TENANT_ID: str = Field(alias="AZURE_TENANT_ID")
     AZURE_CLIENT_ID: str = Field(alias="AZURE_CLIENT_ID")

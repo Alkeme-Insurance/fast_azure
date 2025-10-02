@@ -1,0 +1,14 @@
+.panel {
+	background: var(--card-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 12px;
+	padding: 1rem;
+	color: var(--fg);
+}
+
+.header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
+.th, .td { border-bottom: 1px solid var(--card-border); text-align: left; padding: 0.5rem; }
+.footer { display: flex; align-items: center; justify-content: space-between; margin-top: 0.75rem; }
+
+

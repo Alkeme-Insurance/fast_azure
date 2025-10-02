@@ -3,6 +3,8 @@ import { useAuth } from '../auth/AuthProvider';
 import { SignInCard } from '../components/SignInCard';
 import { UserCard } from '../components/UserCard';
 import { ItemsPanel } from '../components/ItemsPanel';
+import { ProjectsPanel } from '../components/ProjectsPanel';
+import { BoardPanel } from '../components/BoardPanel';
 
 export const Home: React.FC = () => {
 	const { status } = useAuth();
@@ -17,6 +19,8 @@ export const Home: React.FC = () => {
 		<div style={{ display: 'grid', gap: '1rem', padding: '1rem' }}>
 			<UserCard />
 			<ItemsPanel />
+			<ProjectsPanel />
+			<BoardPanel />
 		</div>
 	);
 };
