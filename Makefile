@@ -32,6 +32,9 @@ help:
 	@echo "  make shell-frontend- Open frontend shell"
 	@echo "  make shell-mongo  - Open MongoDB shell"
 	@echo "  make test         - Run tests"
+	@echo ""
+	@echo "📖 For detailed command reference, see MAKEFILE_REFERENCE.md"
+	@echo "📖 For Azure deployment commands, see infrastructure/Makefile"
 
 # Development - run services locally
 dev:

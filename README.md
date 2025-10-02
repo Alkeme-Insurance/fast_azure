@@ -115,11 +115,16 @@ VITE_DEV_NO_AUTH=false
 ### Getting Started
 - **[QUICK_START.md](./QUICK_START.md)** - ⚡ **5-minute setup** for local development
 - **[LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md)** - 🔥 Detailed local development workflow
+- **[MAKEFILE_REFERENCE.md](./MAKEFILE_REFERENCE.md)** - Quick reference for Makefile commands
 - **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Common issues and solutions
 
 ### Configuration & Deployment
 - **[DOCKER_SETUP.md](./DOCKER_SETUP.md)** - Complete Docker configuration guide
 - **[AZURE_AD_SETUP.md](./AZURE_AD_SETUP.md)** - Azure AD authentication setup
+- **[infrastructure/AZURE_DEPLOYMENT.md](./infrastructure/AZURE_DEPLOYMENT.md)** - Deploy to Azure (ACR + AKS + Cosmos DB + Key Vault)
+- **[infrastructure/KEY_VAULT_GUIDE.md](./infrastructure/KEY_VAULT_GUIDE.md)** - Azure Key Vault secret management
+- **[infrastructure/GITHUB_OIDC_GUIDE.md](./infrastructure/GITHUB_OIDC_GUIDE.md)** - GitHub Actions with Azure OIDC (passwordless CI/CD)
+- **[infrastructure/QUICK_REFERENCE.md](./infrastructure/QUICK_REFERENCE.md)** - Quick Azure deployment commands
 
 ### Features & Metrics
 - **[METRICS_MODEL.md](./METRICS_MODEL.md)** - Metrics formulas and calculations (Revenue, Cost, Profit, etc.)

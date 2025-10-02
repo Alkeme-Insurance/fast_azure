@@ -1,0 +1,128 @@
+name: Deploy to Azure AKS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # Required for OIDC authentication
+  contents: read
+
+env:
+  RESOURCE_GROUP: fastazure-rg
+  AKS_CLUSTER: fastazure-dev-aks
+  ACR_NAME: fastazuredevacr
+  KEY_VAULT_NAME: fastazure-dev-kv-abc123xyz  # Replace with your Key Vault name
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get ACR Login Server
+        id: acr
+        run: |
+          ACR_LOGIN_SERVER=$(az acr show --name ${{ env.ACR_NAME }} --query loginServer -o tsv)
+          echo "login_server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Backend Image
+        run: |
+          az acr build \
+            --registry ${{ env.ACR_NAME }} \
+            --image fastazure-backend:${{ github.sha }} \
+            --image fastazure-backend:latest \
+            --file backend/Dockerfile \
+            .
+
+      - name: Build and Push Frontend Image
+        run: |
+          # Get secrets from Key Vault for build-time env vars
+          AZURE_CLIENT_ID=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-client-id --query value -o tsv || echo "")
+          AZURE_TENANT_ID=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-tenant-id --query value -o tsv || echo "")
+          AZURE_API_SCOPE=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-api-scope --query value -o tsv || echo "")
+          
+          # Build with ACR (supports build args)
+          az acr build \
+            --registry ${{ env.ACR_NAME }} \
+            --image fastazure-frontend:${{ github.sha }} \
+            --image fastazure-frontend:latest \
+            --file frontend/Dockerfile \
+            --build-arg VITE_API_BASE_URL=http://backend-service:8000 \
+            --build-arg VITE_AZURE_CLIENT_ID="$AZURE_CLIENT_ID" \
+            --build-arg VITE_AZURE_TENANT_ID="$AZURE_TENANT_ID" \
+            --build-arg VITE_AZURE_API_SCOPE="$AZURE_API_SCOPE" \
+            --build-arg VITE_DEV_NO_AUTH=false \
+            .
+
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AKS_CLUSTER }} \
+            --overwrite-existing
+
+      - name: Create/Update Kubernetes Secrets
+        run: |
+          # Get secrets from Key Vault
+          MONGODB_URI=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name mongodb-uri --query value -o tsv)
+          AZURE_CLIENT_ID=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-client-id --query value -o tsv || echo "")
+          AZURE_TENANT_ID=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-tenant-id --query value -o tsv || echo "")
+          AZURE_API_SCOPE=$(az keyvault secret show --vault-name ${{ env.KEY_VAULT_NAME }} --name azure-api-scope --query value -o tsv || echo "")
+          
+          # Delete existing secret if it exists
+          kubectl delete secret fastazure-secrets -n fastazure --ignore-not-found=true
+          
+          # Create Kubernetes secret
+          kubectl create secret generic fastazure-secrets \
+            --namespace=fastazure \
+            --from-literal=mongodb-uri="$MONGODB_URI" \
+            ${AZURE_CLIENT_ID:+--from-literal=azure-client-id="$AZURE_CLIENT_ID"} \
+            ${AZURE_TENANT_ID:+--from-literal=azure-tenant-id="$AZURE_TENANT_ID"} \
+            ${AZURE_API_SCOPE:+--from-literal=azure-api-scope="$AZURE_API_SCOPE"}
+
+      - name: Update Kubernetes Deployments
+        run: |
+          # Update image tags in deployments
+          kubectl set image deployment/backend \
+            backend=${{ steps.acr.outputs.login_server }}/fastazure-backend:${{ github.sha }} \
+            -n fastazure
+          
+          kubectl set image deployment/frontend \
+            frontend=${{ steps.acr.outputs.login_server }}/fastazure-frontend:${{ github.sha }} \
+            -n fastazure
+          
+          # Wait for rollout
+          kubectl rollout status deployment/backend -n fastazure --timeout=5m
+          kubectl rollout status deployment/frontend -n fastazure --timeout=5m
+
+      - name: Verify Deployment
+        run: |
+          echo "=== Pods ==="
+          kubectl get pods -n fastazure
+          
+          echo "=== Services ==="
+          kubectl get svc -n fastazure
+          
+          echo "=== Ingress ==="
+          kubectl get ingress -n fastazure || true
+          
+          # Get external IP
+          EXTERNAL_IP=$(kubectl get svc frontend-service -n fastazure -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "pending")
+          echo "Application URL: http://$EXTERNAL_IP"
+
+      - name: Azure Logout
+        if: always()
+        run: az logout
+
