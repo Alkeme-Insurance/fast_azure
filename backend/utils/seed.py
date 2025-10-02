@@ -79,7 +79,7 @@ async def seed_initial_data() -> None:
             "notes": "Team is making good progress. Weekly standups on Mondays at 10am. Sprint planning every two weeks.",
             "dueDate": (datetime.now() + timedelta(days=90)).isoformat(),
         })
-        project_id = str(project_result.inserted_id)
+        project_id = str(project_result["_id"])
         
         # Create multiple boards for this project
         frontend_board_result = await db.insert_one("boards", {
@@ -98,7 +98,7 @@ async def seed_initial_data() -> None:
             "description": "Testing, QA, and bug tracking"
         })
         
-        board_id = str(frontend_board_result.inserted_id)
+        board_id = str(frontend_board_result["_id"])
     
     # Seed additional sample projects with different statuses
     sample_projects = [
@@ -233,16 +233,16 @@ async def seed_initial_data() -> None:
         else:
             return
     else:
-        board_id = str(frontend_board_result.inserted_id)
+        board_id = str(frontend_board_result["_id"])
         
         # Create columns
         col_result_1 = await db.insert_one("columns", {"boardId": board_id, "title": "To Do", "position": 0})
         col_result_2 = await db.insert_one("columns", {"boardId": board_id, "title": "In Progress", "position": 1})
         col_result_3 = await db.insert_one("columns", {"boardId": board_id, "title": "Done", "position": 2})
         
-        col1_id = str(col_result_1.inserted_id)
-        col2_id = str(col_result_2.inserted_id)
-        col3_id = str(col_result_3.inserted_id)
+        col1_id = str(col_result_1["_id"])
+        col2_id = str(col_result_2["_id"])
+        col3_id = str(col_result_3["_id"])
         
         # Create rich sample cards
         sample_cards = [

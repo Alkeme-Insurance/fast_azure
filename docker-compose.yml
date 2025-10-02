@@ -1,39 +1,78 @@
 version: "3.9"
 
 services:
+  # MongoDB Database
   mongo:
     image: mongo:7
     container_name: fast_azure_mongo
     ports:
       - "27017:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME:-mongo}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD:-mongo}
+      # Disable authentication for development
+      - MONGO_INITDB_DATABASE=appdb
     volumes:
       - mongo_data:/data/db
+    command: mongod --noauth
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - fast_azure_network
 
+  # FastAPI Backend
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: backend/Dockerfile
     container_name: fast_azure_backend
     ports:
       - "8000:80"
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     environment:
       - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017}
-      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-http://localhost:5173}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
     env_file:
       - .env
     restart: unless-stopped
+    networks:
+      - fast_azure_network
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # API Configuration
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000}
+        - VITE_WS_BASE=${VITE_WS_BASE:-ws://localhost:8000}
+        - VITE_METRICS_SOURCE=${VITE_METRICS_SOURCE:-synth}
+        # Azure AD Configuration
+        - VITE_AZURE_CLIENT_ID=${VITE_AZURE_CLIENT_ID}
+        - VITE_AZURE_TENANT_ID=${VITE_AZURE_TENANT_ID}
+        - VITE_AZURE_REDIRECT_URI=${VITE_AZURE_REDIRECT_URI:-http://localhost:3000}
+        - VITE_AZURE_POST_LOGOUT_REDIRECT_URI=${VITE_AZURE_POST_LOGOUT_REDIRECT_URI:-http://localhost:3000}
+        - VITE_AZURE_API_SCOPE=${VITE_AZURE_API_SCOPE}
+        # Development Mode
+        - VITE_DEV_NO_AUTH=${VITE_DEV_NO_AUTH:-true}
+    container_name: fast_azure_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - fast_azure_network
 
 volumes:
   mongo_data:
+
+networks:
+  fast_azure_network:
+    driver: bridge
 
 

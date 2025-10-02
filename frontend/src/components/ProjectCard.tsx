@@ -13,7 +13,7 @@ export default function ProjectCard({ project, className }: Props) {
 				<span
 					className={
 						`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-							project.status === 'Active' ? 'bg-green-50 text-green-700 ring-1 ring-green-200' : 'bg-gray-50 text-gray-700 ring-1 ring-gray-200'
+							project.status === 'in-progress' ? 'bg-green-50 text-green-700 ring-1 ring-green-200' : 'bg-gray-50 text-gray-700 ring-1 ring-gray-200'
 						}`
 					}
 				>

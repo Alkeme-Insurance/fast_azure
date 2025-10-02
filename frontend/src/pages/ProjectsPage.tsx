@@ -134,7 +134,7 @@ export default function ProjectsPage() {
 								</td>
 								<td className="px-3 py-2 text-sm font-medium text-gray-900"><Link to={`/projects/${p.id}`}>{p.name}</Link></td>
 								<td className="px-3 py-2 text-sm">
-									<span className={`rounded-full px-2 py-0.5 text-xs ${p.status === 'Active' ? 'bg-green-50 text-green-700 ring-1 ring-green-200' : 'bg-gray-50 text-gray-700 ring-1 ring-gray-200'}`}>{p.status}</span>
+									<span className={`rounded-full px-2 py-0.5 text-xs ${p.status === 'in-progress' ? 'bg-green-50 text-green-700 ring-1 ring-green-200' : 'bg-gray-50 text-gray-700 ring-1 ring-gray-200'}`}>{p.status}</span>
 								</td>
 								<td className="px-3 py-2 text-sm text-gray-700">{p.owner.name}</td>
 								<td className="px-3 py-2 text-sm text-gray-700">{p.dueDate ? new Date(p.dueDate).toLocaleDateString() : '-'}</td>

@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { MsalProvider, useIsAuthenticated, useMsal, type IMsalContext } from '@azure/msal-react';
-import { InteractionRequiredAuthError, InteractionType, type AccountInfo, type AuthenticationResult } from '@azure/msal-browser';
+import { MsalProvider, useIsAuthenticated, useMsal } from '@azure/msal-react';
+import { InteractionRequiredAuthError, type AccountInfo, type AuthenticationResult } from '@azure/msal-browser';
 import { loginRequest, pca } from './msalConfig';
+import { DEV_MODE_NO_AUTH } from '../config/env';
 
 type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'error';
 
@@ -44,6 +45,17 @@ export const InternalAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 	const [user, setUser] = useState<AuthUser | null>(null);
 
 	useEffect(() => {
+		// Dev mode: skip authentication
+		if (DEV_MODE_NO_AUTH) {
+			setUser({
+				displayName: 'Dev User',
+				name: 'Dev User',
+				preferred_username: 'dev@localhost',
+			});
+			setStatus('authenticated');
+			return;
+		}
+
 		setStatus('loading');
 		// Attempt silent token to determine session state
 		msal.instance

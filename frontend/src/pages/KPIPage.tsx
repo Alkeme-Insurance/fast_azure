@@ -2,9 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { generateTickerSeed } from '../mock/tickerSeed';
 import { LineChartSVG, type ChartSeries } from '../components/LineChartSVG';
 import { Sparkline } from '../components/Sparkline';
-import { toDaily, lastN, kpiAggregates, colorClass, strokeColor } from '../lib/kpi';
+import { toDaily, lastN, kpiAggregates, strokeColor } from '../lib/kpi';
 import { fmtMoney, fmtNumber } from '../lib/format';
-import type { ProjectTickerDatum } from '../types/ticker';
 
 type MetricType = 'index' | 'profit' | 'time' | 'signals';
 type TimeframeType = 7 | 14 | 30;

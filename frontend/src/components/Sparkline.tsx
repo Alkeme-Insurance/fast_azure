@@ -12,7 +12,6 @@ export const Sparkline: React.FC<SparklineProps> = ({
 	data, 
 	width = 60, 
 	height = 24, 
-	color = '#3b82f6',
 	baseline = 100
 }) => {
 	if (data.length === 0) {

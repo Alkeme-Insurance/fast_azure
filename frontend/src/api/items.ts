@@ -1,6 +1,7 @@
 import { useApi } from './client';
 
 export interface ItemPayload {
+	[key: string]: string | undefined;
 	name?: string;
 	description?: string;
 }
