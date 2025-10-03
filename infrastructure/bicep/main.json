@@ -1,0 +1,647 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "18038144008502456929"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "The Azure region for all resources"
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": [
+        "dev",
+        "staging",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Environment name (dev, staging, prod)"
+      }
+    },
+    "projectName": {
+      "type": "string",
+      "defaultValue": "fastazure",
+      "metadata": {
+        "description": "Base name for all resources"
+      }
+    },
+    "tenantId": {
+      "type": "string",
+      "defaultValue": "[subscription().tenantId]",
+      "metadata": {
+        "description": "Your Azure AD tenant ID for RBAC"
+      }
+    },
+    "adminObjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "Your Azure AD object ID (user/service principal) for AKS admin access"
+      }
+    },
+    "enableAzureAD": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable Azure AD authentication for AKS"
+      }
+    },
+    "azureClientId": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure AD Client ID for frontend authentication"
+      }
+    },
+    "azureTenantId": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure AD Tenant ID for frontend authentication"
+      }
+    },
+    "azureApiScope": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure AD API Scope for backend access"
+      }
+    },
+    "backendCorsOrigins": {
+      "type": "string",
+      "defaultValue": "http://localhost:3000,http://localhost:5173",
+      "metadata": {
+        "description": "Backend CORS origins (comma-separated)"
+      }
+    },
+    "githubRepository": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "GitHub repository for OIDC authentication (format: owner/repo)"
+      }
+    },
+    "enableMonitoring": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable Azure Monitor for containers"
+      }
+    },
+    "nodeCount": {
+      "type": "int",
+      "defaultValue": 3,
+      "minValue": 1,
+      "maxValue": 10,
+      "metadata": {
+        "description": "AKS node count"
+      }
+    },
+    "nodeVmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+        "description": "AKS node VM size"
+      }
+    },
+    "kubernetesVersion": {
+      "type": "string",
+      "defaultValue": "1.28.0",
+      "metadata": {
+        "description": "Kubernetes version"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {
+        "Project": "FastAzure",
+        "Environment": "[parameters('environment')]",
+        "ManagedBy": "Bicep"
+      },
+      "metadata": {
+        "description": "Tags to apply to all resources"
+      }
+    }
+  },
+  "variables": {
+    "resourcePrefix": "[format('{0}-{1}', parameters('projectName'), parameters('environment'))]",
+    "acrName": "[replace(format('{0}acr', variables('resourcePrefix')), '-', '')]",
+    "aksName": "[format('{0}-aks', variables('resourcePrefix'))]",
+    "logAnalyticsName": "[format('{0}-logs', variables('resourcePrefix'))]",
+    "vnetName": "[format('{0}-vnet', variables('resourcePrefix'))]",
+    "aksSubnetName": "aks-subnet",
+    "mongoCosmosName": "[replace(format('{0}-cosmos', variables('resourcePrefix')), '-', '')]",
+    "keyVaultName": "[format('{0}-kv-{1}', take(variables('resourcePrefix'), 20), uniqueString(resourceGroup().id))]"
+  },
+  "resources": [
+    {
+      "condition": "[parameters('enableMonitoring')]",
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('logAnalyticsName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30,
+        "features": {
+          "enableLogAccessUsingOnlyResourcePermissions": true
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('aksSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.1.0/24",
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.ContainerRegistry"
+                },
+                {
+                  "service": "Microsoft.Storage"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[parameters('tenantId')]",
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 90,
+        "enablePurgeProtection": "[if(equals(parameters('environment'), 'prod'), true(), false())]",
+        "publicNetworkAccess": "Enabled",
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "defaultAction": "Allow"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), parameters('adminObjectId'), 'KeyVaultSecretsOfficer')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]",
+        "principalId": "[parameters('adminObjectId')]",
+        "principalType": "User"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'mongodb-uri')]",
+      "properties": {
+        "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('mongoCosmosName')), '2024-05-15').connectionStrings[0].connectionString]",
+        "contentType": "text/plain"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('mongoCosmosName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "condition": "[not(empty(parameters('azureClientId')))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'azure-client-id')]",
+      "properties": {
+        "value": "[parameters('azureClientId')]",
+        "contentType": "text/plain"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "condition": "[not(empty(parameters('azureTenantId')))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'azure-tenant-id')]",
+      "properties": {
+        "value": "[parameters('azureTenantId')]",
+        "contentType": "text/plain"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "condition": "[not(empty(parameters('azureApiScope')))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'azure-api-scope')]",
+      "properties": {
+        "value": "[parameters('azureApiScope')]",
+        "contentType": "text/plain"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'backend-cors-origins')]",
+      "properties": {
+        "value": "[parameters('backendCorsOrigins')]",
+        "contentType": "text/plain"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-11-01-preview",
+      "name": "[variables('acrName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "[if(equals(parameters('environment'), 'prod'), 'Premium', 'Standard')]"
+      },
+      "properties": {
+        "adminUserEnabled": false,
+        "publicNetworkAccess": "Enabled",
+        "networkRuleBypassOptions": "AzureServices",
+        "policies": {
+          "quarantinePolicy": {
+            "status": "disabled"
+          },
+          "trustPolicy": {
+            "type": "Notary",
+            "status": "disabled"
+          },
+          "retentionPolicy": {
+            "days": 30,
+            "status": "[if(equals(parameters('environment'), 'prod'), 'enabled', 'disabled')]"
+          }
+        },
+        "encryption": {
+          "status": "disabled"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.ContainerService/managedClusters",
+      "apiVersion": "2024-01-01",
+      "name": "[variables('aksName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "kubernetesVersion": "[parameters('kubernetesVersion')]",
+        "dnsPrefix": "[format('{0}-dns', variables('resourcePrefix'))]",
+        "enableRBAC": true,
+        "oidcIssuerProfile": {
+          "enabled": true
+        },
+        "securityProfile": {
+          "workloadIdentity": {
+            "enabled": true
+          }
+        },
+        "aadProfile": "[if(parameters('enableAzureAD'), createObject('managed', true(), 'enableAzureRBAC', true(), 'tenantID', parameters('tenantId')), null())]",
+        "agentPoolProfiles": [
+          {
+            "name": "agentpool",
+            "count": "[parameters('nodeCount')]",
+            "vmSize": "[parameters('nodeVmSize')]",
+            "osType": "Linux",
+            "mode": "System",
+            "type": "VirtualMachineScaleSets",
+            "enableAutoScaling": true,
+            "minCount": "[if(equals(parameters('environment'), 'prod'), 3, 1)]",
+            "maxCount": "[if(equals(parameters('environment'), 'prod'), 10, 5)]",
+            "vnetSubnetID": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2023-09-01').subnets[0].id]",
+            "maxPods": 110,
+            "osDiskSizeGB": 128,
+            "osDiskType": "Managed"
+          }
+        ],
+        "networkProfile": {
+          "networkPlugin": "azure",
+          "networkPolicy": "azure",
+          "serviceCidr": "10.1.0.0/16",
+          "dnsServiceIP": "10.1.0.10",
+          "loadBalancerSku": "standard",
+          "outboundType": "loadBalancer"
+        },
+        "addonProfiles": {
+          "omsagent": "[if(parameters('enableMonitoring'), createObject('enabled', true(), 'config', createObject('logAnalyticsWorkspaceResourceID', resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName')))), createObject('enabled', false()))]",
+          "azurepolicy": {
+            "enabled": false
+          },
+          "httpApplicationRouting": {
+            "enabled": false
+          }
+        },
+        "apiServerAccessProfile": {
+          "enablePrivateCluster": false
+        },
+        "autoUpgradeProfile": {
+          "upgradeChannel": "[if(equals(parameters('environment'), 'prod'), 'stable', 'patch')]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', variables('acrName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), resourceId('Microsoft.ContainerService/managedClusters', variables('aksName')), 'AcrPull')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalId": "[reference(resourceId('Microsoft.ContainerService/managedClusters', variables('aksName')), '2024-01-01').identityProfile.kubeletidentity.objectId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', variables('aksName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', variables('aksName')), parameters('adminObjectId'), 'AKSClusterAdmin')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]",
+        "principalId": "[parameters('adminObjectId')]",
+        "principalType": "User"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), resourceId('Microsoft.ContainerService/managedClusters', variables('aksName')), 'KeyVaultSecretsUser')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+        "principalId": "[reference(resourceId('Microsoft.ContainerService/managedClusters', variables('aksName')), '2024-01-01').identityProfile.kubeletidentity.objectId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[format('{0}-github-identity', variables('resourcePrefix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "condition": "[not(empty(parameters('githubRepository')))]",
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials",
+      "apiVersion": "2023-01-31",
+      "name": "[format('{0}/{1}', format('{0}-github-identity', variables('resourcePrefix')), 'github-federated-credential')]",
+      "properties": {
+        "issuer": "https://token.actions.githubusercontent.com",
+        "subject": "[format('repo:{0}:ref:refs/heads/main', parameters('githubRepository'))]",
+        "audiences": [
+          "api://AzureADTokenExchange"
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-github-identity', variables('resourcePrefix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), format('{0}-github-identity', variables('resourcePrefix')), 'GitHubSecretsUser')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-github-identity', variables('resourcePrefix'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-github-identity', variables('resourcePrefix')))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', variables('acrName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), format('{0}-github-identity', variables('resourcePrefix')), 'GitHubAcrPull')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-github-identity', variables('resourcePrefix'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-github-identity', variables('resourcePrefix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', variables('aksName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', variables('aksName')), format('{0}-github-identity', variables('resourcePrefix')), 'GitHubAksContributor')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-github-identity', variables('resourcePrefix'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-github-identity', variables('resourcePrefix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2024-05-15",
+      "name": "[variables('mongoCosmosName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "MongoDB",
+      "properties": {
+        "databaseAccountOfferType": "Standard",
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "locations": [
+          {
+            "locationName": "[parameters('location')]",
+            "failoverPriority": 0,
+            "isZoneRedundant": "[equals(parameters('environment'), 'prod')]"
+          }
+        ],
+        "capabilities": [
+          {
+            "name": "EnableMongo"
+          },
+          {
+            "name": "EnableServerless"
+          }
+        ],
+        "apiProperties": {
+          "serverVersion": "7.0"
+        },
+        "enableAutomaticFailover": "[equals(parameters('environment'), 'prod')]",
+        "enableFreeTier": "[equals(parameters('environment'), 'dev')]"
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/mongodbDatabases",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}', variables('mongoCosmosName'), 'appdb')]",
+      "properties": {
+        "resource": {
+          "id": "appdb"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('mongoCosmosName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "acrName": {
+      "type": "string",
+      "value": "[variables('acrName')]"
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-11-01-preview').loginServer]"
+    },
+    "aksName": {
+      "type": "string",
+      "value": "[variables('aksName')]"
+    },
+    "aksFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', variables('aksName')), '2024-01-01').fqdn]"
+    },
+    "aksId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
+    },
+    "aksNodeResourceGroup": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', variables('aksName')), '2024-01-01').nodeResourceGroup]"
+    },
+    "aksOidcIssuerUrl": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', variables('aksName')), '2024-01-01').oidcIssuerProfile.issuerURL]"
+    },
+    "logAnalyticsId": {
+      "type": "string",
+      "value": "[if(parameters('enableMonitoring'), resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName')), '')]"
+    },
+    "vnetId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "value": "[variables('keyVaultName')]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri]"
+    },
+    "cosmosConnectionString": {
+      "type": "string",
+      "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('mongoCosmosName')), '2024-05-15').connectionStrings[0].connectionString]"
+    },
+    "cosmosEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('mongoCosmosName')), '2024-05-15').documentEndpoint]"
+    },
+    "githubIdentityClientId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-github-identity', variables('resourcePrefix'))), '2023-01-31').clientId]"
+    },
+    "githubIdentityPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-github-identity', variables('resourcePrefix'))), '2023-01-31').principalId]"
+    },
+    "githubIdentityName": {
+      "type": "string",
+      "value": "[format('{0}-github-identity', variables('resourcePrefix'))]"
+    },
+    "aksConnectCommands": {
+      "type": "string",
+      "metadata": {
+        "description": "Commands to connect to AKS"
+      },
+      "value": "# Get AKS credentials\naz aks get-credentials --resource-group ${resourceGroup().name} --name ${aksName}\n\n# Verify connection\nkubectl get nodes\n\n# View cluster info\nkubectl cluster-info\n"
+    },
+    "acrPushCommands": {
+      "type": "string",
+      "metadata": {
+        "description": "Commands to push images to ACR"
+      },
+      "value": "# Login to ACR\naz acr login --name ${acrName}\n\n# Build and push backend\ndocker build -t ${acr.properties.loginServer}/fastazure-backend:latest -f backend/Dockerfile .\ndocker push ${acr.properties.loginServer}/fastazure-backend:latest\n\n# Build and push frontend\ndocker build -t ${acr.properties.loginServer}/fastazure-frontend:latest -f frontend/Dockerfile .\ndocker push ${acr.properties.loginServer}/fastazure-frontend:latest\n"
+    },
+    "keyVaultCommands": {
+      "type": "string",
+      "metadata": {
+        "description": "Commands to access Key Vault secrets"
+      },
+      "value": "# View all secrets\naz keyvault secret list --vault-name ${keyVaultName} --query \"[].name\" -o table\n\n# Get a specific secret\naz keyvault secret show --vault-name ${keyVaultName} --name mongodb-uri --query \"value\" -o tsv\n\n# Set a new secret\naz keyvault secret set --vault-name ${keyVaultName} --name my-secret --value \"my-value\"\n"
+    },
+    "githubActionsConfig": {
+      "type": "string",
+      "metadata": {
+        "description": "GitHub Actions OIDC configuration"
+      },
+      "value": "[if(not(empty(parameters('githubRepository'))), '# Add these secrets to your GitHub repository:\n# Settings → Secrets and variables → Actions → New repository secret\n\nAZURE_CLIENT_ID=${githubWorkloadIdentity.properties.clientId}\nAZURE_TENANT_ID=${tenantId}\nAZURE_SUBSCRIPTION_ID=${subscription().subscriptionId}\n\n# Use in GitHub Actions workflow:\n- uses: azure/login@v1\n  with:\n    client-id: $${{ secrets.AZURE_CLIENT_ID }}\n    tenant-id: $${{ secrets.AZURE_TENANT_ID }}\n    subscription-id: $${{ secrets.AZURE_SUBSCRIPTION_ID }}\n', 'GitHub repository not configured')]"
+    }
+  }
+}
