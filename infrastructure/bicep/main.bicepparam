@@ -31,7 +31,7 @@ param backendCorsOrigins = 'http://localhost:3000,http://localhost:5173'
 // Optional Parameters (can override defaults)
 // ============================================
 
-param location = 'eastus'
+param location = 'eastus2'
 param environment = 'dev'
 param projectName = 'fastazure'
 param enableAzureAD = true

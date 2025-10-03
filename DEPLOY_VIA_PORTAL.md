@@ -41,14 +41,14 @@ Or navigate manually:
 **Basics:**
 - **Subscription:** Your Azure subscription
 - **Resource Group:** `fastazure-rg` (select existing)
-- **Region:** `East US`
+- **Region:** `East US 2`
 
 **Settings (copy these values):**
 
 | Parameter | Value |
 |-----------|-------|
 | **Environment** | `dev` |
-| **Location** | `eastus` |
+| **Location** | `eastus2` |
 | **Admin Object Id** | `f36d4365-feb7-412a-8293-87e82aea74e2` |
 | **Azure Client Id** | `93aa5068-cdd5-48df-99fb-01407ae51271` |
 | **Azure Tenant Id** | `79e26e89-11be-48b6-ad96-fca9c401382c` |
@@ -112,14 +112,16 @@ az rest \
 
 ### Via Command Line
 ```bash
-# Check deployment status
+# Check deployment status (use the deployment name from Portal, usually starts with "Microsoft.Template-")
+DEPLOYMENT_NAME="fastazure-deployment"  # Or get from: az deployment group list --resource-group fastazure-rg --query "[0].name" -o tsv
+
 az deployment group show \
   --resource-group fastazure-rg \
-  --name main \
+  --name $DEPLOYMENT_NAME \
   --query "{Status: properties.provisioningState, Duration: properties.duration}"
 
 # Watch it (refreshes every 10 seconds)
-watch -n 10 'az deployment group show --resource-group fastazure-rg --name main --query properties.provisioningState -o tsv 2>/dev/null || echo "Not started yet..."'
+watch -n 10 "az deployment group show --resource-group fastazure-rg --name $DEPLOYMENT_NAME --query properties.provisioningState -o tsv 2>/dev/null || echo 'Not started yet...'"
 ```
 
 ---
@@ -128,9 +130,13 @@ watch -n 10 'az deployment group show --resource-group fastazure-rg --name main 
 
 ### 1. Get Deployment Outputs
 ```bash
+# Get the deployment name (Portal creates it automatically)
+DEPLOYMENT_NAME=$(az deployment group list --resource-group fastazure-rg --query "[0].name" -o tsv)
+echo "Using deployment: $DEPLOYMENT_NAME"
+
 az deployment group show \
   --resource-group fastazure-rg \
-  --name main \
+  --name $DEPLOYMENT_NAME \
   --query properties.outputs \
   --output json > deployment-outputs.json
 

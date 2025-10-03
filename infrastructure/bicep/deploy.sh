@@ -11,7 +11,7 @@ set -e
 # ============================================
 
 RESOURCE_GROUP="${RESOURCE_GROUP:-fastazure-rg}"
-LOCATION="${LOCATION:-eastus}"
+LOCATION="${LOCATION:-eastus2}"
 ENVIRONMENT="${ENVIRONMENT:-dev}"
 GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-}"  # Format: owner/repo
 BICEP_FILE="main.bicep"
