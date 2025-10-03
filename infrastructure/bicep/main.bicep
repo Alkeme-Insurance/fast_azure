@@ -393,7 +393,7 @@ resource aksKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04
 // Managed Identity for GitHub OIDC
 // ============================================
 
-resource githubWorkloadIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = if (!empty(githubRepository)) {
+resource githubWorkloadIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: '${resourcePrefix}-github-identity'
   location: location
   tags: tags
@@ -413,8 +413,8 @@ resource githubFederatedCredential 'Microsoft.ManagedIdentity/userAssignedIdenti
 }
 
 // Grant GitHub identity Key Vault Secrets User role
-resource githubKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(githubRepository)) {
-  name: guid(keyVault.id, githubWorkloadIdentity.id, 'GitHubSecretsUser')
+resource githubKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, githubWorkloadIdentity.name, 'GitHubSecretsUser')
   scope: keyVault
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
@@ -424,8 +424,8 @@ resource githubKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022
 }
 
 // Grant GitHub identity AcrPull role for ACR
-resource githubAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(githubRepository)) {
-  name: guid(acr.id, githubWorkloadIdentity.id, 'GitHubAcrPull')
+resource githubAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(acr.id, githubWorkloadIdentity.name, 'GitHubAcrPull')
   scope: acr
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
@@ -435,8 +435,8 @@ resource githubAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if
 }
 
 // Grant GitHub identity Contributor role on AKS (for kubectl access)
-resource githubAksContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(githubRepository)) {
-  name: guid(aks.id, githubWorkloadIdentity.id, 'GitHubAksContributor')
+resource githubAksContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(aks.id, githubWorkloadIdentity.name, 'GitHubAksContributor')
   scope: aks
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c') // Contributor
@@ -509,9 +509,9 @@ output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
 output cosmosConnectionString string = cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString
 output cosmosEndpoint string = cosmosAccount.properties.documentEndpoint
-output githubIdentityClientId string = !empty(githubRepository) ? githubWorkloadIdentity.properties.clientId : ''
-output githubIdentityPrincipalId string = !empty(githubRepository) ? githubWorkloadIdentity.properties.principalId : ''
-output githubIdentityName string = !empty(githubRepository) ? githubWorkloadIdentity.name : ''
+output githubIdentityClientId string = githubWorkloadIdentity.properties.clientId
+output githubIdentityPrincipalId string = githubWorkloadIdentity.properties.principalId
+output githubIdentityName string = githubWorkloadIdentity.name
 
 @description('Commands to connect to AKS')
 output aksConnectCommands string = '''
