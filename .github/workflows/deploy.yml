@@ -115,39 +115,28 @@ jobs:
 
       - name: Build and Push Backend Image
         run: |
-          # Create a tarball of the backend context
-          cd backend
-          tar -czf ../backend-context.tar.gz .
-          cd ..
-          
-          # Build using tarball to ensure all files are included
           az acr build \
             --registry ${{ env.ACR_NAME }} \
             --image fastazure-backend:${{ github.sha }} \
             --image fastazure-backend:latest \
-            --file Dockerfile \
-            backend-context.tar.gz
+            --file backend/Dockerfile \
+            .
 
       - name: Build and Push Frontend Image
         run: |
-          # Create a tarball of the frontend context
-          cd frontend
-          tar -czf ../frontend-context.tar.gz .
-          cd ..
-          
           # Use GitHub secrets for build-time env vars
           # Build with ACR (supports build args)
           az acr build \
             --registry ${{ env.ACR_NAME }} \
             --image fastazure-frontend:${{ github.sha }} \
             --image fastazure-frontend:latest \
-            --file Dockerfile \
+            --file frontend/Dockerfile \
             --build-arg VITE_API_BASE_URL=http://backend-service:8000 \
             --build-arg VITE_AZURE_CLIENT_ID="${{ secrets.VITE_AZURE_CLIENT_ID }}" \
             --build-arg VITE_AZURE_TENANT_ID="${{ secrets.VITE_AZURE_TENANT_ID }}" \
             --build-arg VITE_AZURE_API_SCOPE="${{ secrets.VITE_AZURE_API_SCOPE }}" \
             --build-arg VITE_DEV_NO_AUTH=false \
-            frontend-context.tar.gz
+            .
 
       - name: Get AKS Credentials
         run: |
