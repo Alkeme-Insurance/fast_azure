@@ -33,14 +33,14 @@ ENV VITE_AZURE_POST_LOGOUT_REDIRECT_URI=$VITE_AZURE_POST_LOGOUT_REDIRECT_URI
 ENV VITE_AZURE_API_SCOPE=$VITE_AZURE_API_SCOPE
 ENV VITE_DEV_NO_AUTH=$VITE_DEV_NO_AUTH
 
-# Copy package files
-COPY package*.json ./
+# Copy package files from frontend/
+COPY frontend/package*.json ./
 
 # Install dependencies
 RUN npm ci
 
-# Copy source code
-COPY . .
+# Copy source code from frontend/
+COPY frontend/ .
 
 # Build the application
 RUN npm run build
@@ -51,8 +51,8 @@ FROM nginx:alpine
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy custom nginx config (optional)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx config from frontend/
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80
 EXPOSE 80
