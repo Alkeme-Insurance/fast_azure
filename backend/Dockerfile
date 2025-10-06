@@ -17,9 +17,9 @@ COPY uv.lock* ./
 RUN pip install uv
 
 # Install dependencies
-RUN uv sync --frozen
+RUN uv sync --frozen --no-cache
 
-# Copy application code
+# Copy application code (context is backend/, copy to backend/ subdirectory for module structure)
 COPY . ./backend/
 
 # Expose port
