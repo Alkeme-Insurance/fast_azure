@@ -31,6 +31,77 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Check and Deploy Infrastructure
+        id: infra
+        run: |
+          echo "🔍 Checking if infrastructure exists..."
+          
+          # Check if ACR exists
+          if az acr show --name ${{ env.ACR_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            echo "✅ ACR exists"
+            echo "infra_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ ACR not found - deploying infrastructure..."
+            echo "infra_exists=false" >> $GITHUB_OUTPUT
+            
+            # Get admin object ID
+            ADMIN_OBJECT_ID=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || echo "")
+            if [ -z "$ADMIN_OBJECT_ID" ]; then
+              # If signed-in user doesn't work (service principal), use the managed identity
+              ADMIN_OBJECT_ID="${{ secrets.AZURE_CLIENT_ID }}"
+            fi
+            
+            echo "📝 Deploying infrastructure via Bicep..."
+            az deployment group create \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name "fastazure-deployment-${{ github.run_number }}" \
+              --template-file infrastructure/bicep/main.bicep \
+              --parameters location=eastus2 \
+              --parameters environment=dev \
+              --parameters adminObjectId="$ADMIN_OBJECT_ID" \
+              --parameters azureClientId="${{ secrets.VITE_AZURE_CLIENT_ID }}" \
+              --parameters azureTenantId="${{ secrets.VITE_AZURE_TENANT_ID }}" \
+              --parameters azureApiScope="${{ secrets.VITE_AZURE_API_SCOPE }}" \
+              --parameters 'backendCorsOrigins=["http://localhost:3000","http://localhost:5173","http://localhost:8001"]' \
+              --parameters githubRepository="${{ github.repository }}" \
+              --no-wait
+            
+            echo "⏳ Waiting for infrastructure deployment to complete..."
+            echo "This may take 10-15 minutes..."
+            
+            # Wait for deployment to complete
+            for i in {1..90}; do
+              STATUS=$(az deployment group show \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --name "fastazure-deployment-${{ github.run_number }}" \
+                --query properties.provisioningState -o tsv 2>/dev/null || echo "InProgress")
+              
+              echo "[$i/90] Deployment status: $STATUS"
+              
+              if [ "$STATUS" = "Succeeded" ]; then
+                echo "✅ Infrastructure deployment completed!"
+                break
+              elif [ "$STATUS" = "Failed" ]; then
+                echo "❌ Infrastructure deployment failed!"
+                az deployment group show \
+                  --resource-group ${{ env.RESOURCE_GROUP }} \
+                  --name "fastazure-deployment-${{ github.run_number }}" \
+                  --query properties.error
+                exit 1
+              fi
+              
+              sleep 10
+            done
+            
+            # Verify ACR was created
+            if ! az acr show --name ${{ env.ACR_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+              echo "❌ ACR still not found after deployment!"
+              exit 1
+            fi
+            
+            echo "✅ Infrastructure is ready!"
+          fi
+
       - name: Get ACR Login Server and Key Vault Name
         id: acr
         run: |
@@ -74,6 +145,16 @@ jobs:
             --name ${{ env.AKS_CLUSTER }} \
             --overwrite-existing
 
+      - name: Setup Kubernetes Namespace and Resources
+        run: |
+          # Create namespace if it doesn't exist
+          kubectl create namespace fastazure --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Apply all Kubernetes manifests
+          echo "📝 Applying Kubernetes manifests..."
+          kubectl apply -f infrastructure/k8s/namespace.yaml || true
+          kubectl apply -f infrastructure/k8s/configmap.yaml || true
+
       - name: Create/Update Kubernetes Secrets
         run: |
           KEY_VAULT_NAME="${{ steps.acr.outputs.key_vault_name }}"
@@ -92,9 +173,15 @@ jobs:
             --from-literal=azure-tenant-id="${{ secrets.VITE_AZURE_TENANT_ID }}" \
             --from-literal=azure-api-scope="${{ secrets.VITE_AZURE_API_SCOPE }}"
 
-      - name: Update Kubernetes Deployments
+      - name: Deploy or Update Kubernetes Applications
         run: |
-          # Update image tags in deployments
+          # Apply deployments
+          echo "📝 Deploying applications..."
+          kubectl apply -f infrastructure/k8s/backend-deployment.yaml
+          kubectl apply -f infrastructure/k8s/frontend-deployment.yaml
+          
+          # Update image tags
+          echo "🔄 Updating image tags..."
           kubectl set image deployment/backend \
             backend=${{ steps.acr.outputs.login_server }}/fastazure-backend:${{ github.sha }} \
             -n fastazure
@@ -103,7 +190,12 @@ jobs:
             frontend=${{ steps.acr.outputs.login_server }}/fastazure-frontend:${{ github.sha }} \
             -n fastazure
           
+          # Apply ingress and HPA
+          kubectl apply -f infrastructure/k8s/ingress.yaml || true
+          kubectl apply -f infrastructure/k8s/hpa.yaml || true
+          
           # Wait for rollout
+          echo "⏳ Waiting for deployments to be ready..."
           kubectl rollout status deployment/backend -n fastazure --timeout=5m
           kubectl rollout status deployment/frontend -n fastazure --timeout=5m
 
