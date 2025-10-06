@@ -7,9 +7,9 @@ node_modules/
 coverage/
 .nyc_output
 
-# Production
-dist/
-build/
+# Production (don't exclude during build, only after)
+# dist/
+# build/
 
 # Misc
 .DS_Store
@@ -40,4 +40,7 @@ docker-compose*.yml
 # Git
 .git
 .gitignore
+
+# IMPORTANT: Do NOT exclude src/ or any source files!
+# We need all TypeScript source files for the build
 
