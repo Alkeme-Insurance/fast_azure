@@ -1,8 +1,13 @@
-from pydantic import AnyHttpUrl, Field, computed_field, field_validator
-from pydantic_settings import BaseSettings
+from pydantic import AnyHttpUrl, Field, computed_field, field_validator, ConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file='.env',
+        env_file_encoding='utf-8',
+        case_sensitive=True,
+    )
     #Update this to load from env
     # Changed to list[str] to avoid AnyHttpUrl validation issues with wildcards
     BACKEND_CORS_ORIGINS: list[str] = [
@@ -50,10 +55,6 @@ class Settings(BaseSettings):
             self.SCOPE_NAME: self.SCOPE_DESCRIPTION,
         }
 
-    class Config:
-        env_file = '.env'
-        env_file_encoding = 'utf-8'
-        case_sensitive = True
 
 
 
