@@ -183,20 +183,16 @@ jobs:
 
       - name: Deploy or Update Kubernetes Applications
         run: |
-          # Apply deployments
-          echo "📝 Deploying applications..."
-          kubectl apply -f infrastructure/k8s/backend-deployment.yaml
-          kubectl apply -f infrastructure/k8s/frontend-deployment.yaml
+          ACR_LOGIN_SERVER="${{ steps.acr.outputs.login_server }}"
+          IMAGE_TAG="${{ github.sha }}"
           
-          # Update image tags
-          echo "🔄 Updating image tags..."
-          kubectl set image deployment/backend \
-            backend=${{ steps.acr.outputs.login_server }}/fastazure-backend:${{ github.sha }} \
-            -n fastazure
+          # Replace placeholders in deployment manifests
+          echo "📝 Preparing deployment manifests..."
+          sed "s|<ACR_LOGIN_SERVER>|${ACR_LOGIN_SERVER}|g" infrastructure/k8s/backend-deployment.yaml | \
+            sed "s|:latest|:${IMAGE_TAG}|g" | kubectl apply -f -
           
-          kubectl set image deployment/frontend \
-            frontend=${{ steps.acr.outputs.login_server }}/fastazure-frontend:${{ github.sha }} \
-            -n fastazure
+          sed "s|<ACR_LOGIN_SERVER>|${ACR_LOGIN_SERVER}|g" infrastructure/k8s/frontend-deployment.yaml | \
+            sed "s|:latest|:${IMAGE_TAG}|g" | kubectl apply -f -
           
           # Apply ingress and HPA
           kubectl apply -f infrastructure/k8s/ingress.yaml || true
@@ -204,8 +200,8 @@ jobs:
           
           # Wait for rollout
           echo "⏳ Waiting for deployments to be ready..."
-          kubectl rollout status deployment/backend -n fastazure --timeout=5m
-          kubectl rollout status deployment/frontend -n fastazure --timeout=5m
+          kubectl rollout status deployment/backend -n fastazure --timeout=10m
+          kubectl rollout status deployment/frontend -n fastazure --timeout=10m
 
       - name: Verify Deployment
         run: |
