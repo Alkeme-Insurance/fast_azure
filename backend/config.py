@@ -10,14 +10,6 @@ class Settings(BaseSettings):
         'http://localhost:5173',
         'http://127.0.0.1:5173',
     ]
-    
-    @field_validator('BACKEND_CORS_ORIGINS', mode='before')
-    @classmethod
-    def parse_cors_origins(cls, v):
-        if isinstance(v, str):
-            # Split comma-separated string into list
-            return [origin.strip() for origin in v.split(',')]
-        return v
     OPENAPI_CLIENT_ID: str = ""
     AZURE_TENANT_ID: str = Field(alias="AZURE_TENANT_ID")
     AZURE_CLIENT_ID: str = Field(alias="AZURE_CLIENT_ID")
@@ -36,6 +28,14 @@ class Settings(BaseSettings):
     OIDC_REDIRECT_URI: str | None = Field(default=None, alias="OIDC_REDIRECT_URI")
     APP_ID: str = Field(alias="APP_ID")
     MONGODB_URI: str = Field(default="mongodb://localhost:27017", alias="MONGODB_URI")
+
+    @field_validator('BACKEND_CORS_ORIGINS', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        if isinstance(v, str):
+            # Split comma-separated string into list
+            return [origin.strip() for origin in v.split(',')]
+        return v
 
     @computed_field
     @property
