@@ -4,7 +4,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     #Update this to load from env
-    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = [
+    # Changed to list[str] to avoid AnyHttpUrl validation issues with wildcards
+    BACKEND_CORS_ORIGINS: list[str] = [
         'http://localhost:8000',
         'http://127.0.0.1:8000',
         'http://localhost:5173',
