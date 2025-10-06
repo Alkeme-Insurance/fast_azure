@@ -119,8 +119,8 @@ jobs:
             --registry ${{ env.ACR_NAME }} \
             --image fastazure-backend:${{ github.sha }} \
             --image fastazure-backend:latest \
-            --file backend/Dockerfile \
-            .
+            --file Dockerfile \
+            backend/
 
       - name: Build and Push Frontend Image
         run: |
@@ -130,13 +130,13 @@ jobs:
             --registry ${{ env.ACR_NAME }} \
             --image fastazure-frontend:${{ github.sha }} \
             --image fastazure-frontend:latest \
-            --file frontend/Dockerfile \
+            --file Dockerfile \
             --build-arg VITE_API_BASE_URL=http://backend-service:8000 \
             --build-arg VITE_AZURE_CLIENT_ID="${{ secrets.VITE_AZURE_CLIENT_ID }}" \
             --build-arg VITE_AZURE_TENANT_ID="${{ secrets.VITE_AZURE_TENANT_ID }}" \
             --build-arg VITE_AZURE_API_SCOPE="${{ secrets.VITE_AZURE_API_SCOPE }}" \
             --build-arg VITE_DEV_NO_AUTH=false \
-            .
+            frontend/
 
       - name: Get AKS Credentials
         run: |
