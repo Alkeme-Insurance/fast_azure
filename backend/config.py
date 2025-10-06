@@ -1,4 +1,4 @@
-from pydantic import AnyHttpUrl, Field, computed_field
+from pydantic import AnyHttpUrl, Field, computed_field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -10,6 +10,14 @@ class Settings(BaseSettings):
         'http://localhost:5173',
         'http://127.0.0.1:5173',
     ]
+    
+    @field_validator('BACKEND_CORS_ORIGINS', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        if isinstance(v, str):
+            # Split comma-separated string into list
+            return [origin.strip() for origin in v.split(',')]
+        return v
     OPENAPI_CLIENT_ID: str = ""
     AZURE_TENANT_ID: str = Field(alias="AZURE_TENANT_ID")
     AZURE_CLIENT_ID: str = Field(alias="AZURE_CLIENT_ID")
