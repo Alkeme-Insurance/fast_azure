@@ -15,7 +15,8 @@ param projectName string = 'fastazure'
 var resourcePrefix = '${projectName}-${environment}'
 var acrName = replace('${projectName}${environment}acr', '-', '')
 var aksName = '${resourcePrefix}-aks'
-var keyVaultName = '${resourcePrefix}-kv-${uniqueString(resourceGroup().id)}'
+// Key Vault name must be 3-24 chars, alphanumeric and hyphens only
+var keyVaultName = 'kv-${projectName}-${take(uniqueString(resourceGroup().id), 6)}'
 var cosmosName = replace('${resourcePrefix}mongo', '-', '')
 
 // ACR
