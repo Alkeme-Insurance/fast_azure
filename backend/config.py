@@ -28,13 +28,13 @@ class Settings(BaseSettings):
     OIDC_JWKS_URL: str | None = Field(default=None, alias="OIDC_JWKS_URL")
     OIDC_SCOPES: str | None = Field(default=None, alias="OIDC_SCOPES")
     SCOPE_DESCRIPTION: str = "user_impersonation"
-    TENANT_ID: str = Field(alias="TENANT_ID")
-    OBJECT_ID: str = Field(alias="OBJECT_ID")
-    APP_ID_URI: str = Field(alias="APP_ID_URI")
-    SCOPE_ID: str = Field(alias="SCOPE_ID")
+    TENANT_ID: str | None = Field(default=None, alias="TENANT_ID")
+    OBJECT_ID: str | None = Field(default=None, alias="OBJECT_ID")
+    APP_ID_URI: str | None = Field(default=None, alias="APP_ID_URI")
+    SCOPE_ID: str | None = Field(default=None, alias="SCOPE_ID")
     CLIENT_SECRET: str | None = Field(default=None, alias="CLIENT_SECRET")
     OIDC_REDIRECT_URI: str | None = Field(default=None, alias="OIDC_REDIRECT_URI")
-    APP_ID: str = Field(alias="APP_ID")
+    APP_ID: str | None = Field(default=None, alias="APP_ID")
     MONGODB_URI: str = Field(default="mongodb://localhost:27017", alias="MONGODB_URI")
 
     @computed_field
