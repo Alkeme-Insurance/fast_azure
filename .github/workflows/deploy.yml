@@ -110,8 +110,16 @@ jobs:
           
           # Get Key Vault name from resource group
           KEY_VAULT_NAME=$(az keyvault list --resource-group ${{ env.RESOURCE_GROUP }} --query "[0].name" -o tsv)
+          
+          if [ -z "$KEY_VAULT_NAME" ]; then
+            echo "❌ Key Vault not found! Infrastructure may not be fully deployed."
+            echo "Checking deployment status..."
+            az deployment group list --resource-group ${{ env.RESOURCE_GROUP }} --query "[].{name:name, state:properties.provisioningState}" -o table
+            exit 1
+          fi
+          
           echo "key_vault_name=$KEY_VAULT_NAME" >> $GITHUB_OUTPUT
-          echo "Key Vault: $KEY_VAULT_NAME"
+          echo "✅ Key Vault: $KEY_VAULT_NAME"
 
       - name: Build and Push Backend Image
         run: |
