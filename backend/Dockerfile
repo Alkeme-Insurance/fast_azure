@@ -20,7 +20,7 @@ RUN pip install uv
 RUN uv sync --frozen
 
 # Copy application code
-COPY backend/ ./backend/
+COPY . ./backend/
 
 # Expose port
 EXPOSE 80
