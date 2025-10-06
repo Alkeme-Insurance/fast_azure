@@ -53,19 +53,14 @@ jobs:
             
             echo "📝 Deploying infrastructure via Bicep..."
             
-            # Use --no-wait and avoid output to work around Azure CLI bug
+            # Use simplified template without RBAC to avoid permission issues
             az deployment group create \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --name "fastazure-deployment-${{ github.run_number }}" \
-              --template-file infrastructure/bicep/main.bicep \
+              --template-file infrastructure/bicep/main-no-rbac.bicep \
               --parameters location=eastus2 \
               --parameters environment=dev \
-              --parameters adminObjectId="$ADMIN_OBJECT_ID" \
-              --parameters azureClientId="${{ secrets.VITE_AZURE_CLIENT_ID }}" \
-              --parameters azureTenantId="${{ secrets.VITE_AZURE_TENANT_ID }}" \
-              --parameters azureApiScope="${{ secrets.VITE_AZURE_API_SCOPE }}" \
-              --parameters 'backendCorsOrigins=["http://localhost:3000","http://localhost:5173","http://localhost:8001"]' \
-              --parameters githubRepository="${{ github.repository }}" \
+              --parameters projectName=fastazure \
               --no-wait \
               > /dev/null 2>&1 || true
             
