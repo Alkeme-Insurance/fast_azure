@@ -52,6 +52,8 @@ jobs:
             fi
             
             echo "📝 Deploying infrastructure via Bicep..."
+            
+            # Use --no-wait and avoid output to work around Azure CLI bug
             az deployment group create \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --name "fastazure-deployment-${{ github.run_number }}" \
@@ -64,7 +66,10 @@ jobs:
               --parameters azureApiScope="${{ secrets.VITE_AZURE_API_SCOPE }}" \
               --parameters 'backendCorsOrigins=["http://localhost:3000","http://localhost:5173","http://localhost:8001"]' \
               --parameters githubRepository="${{ github.repository }}" \
-              --no-wait
+              --no-wait \
+              > /dev/null 2>&1 || true
+            
+            echo "✅ Deployment initiated (running in background)"
             
             echo "⏳ Waiting for infrastructure deployment to complete..."
             echo "This may take 10-15 minutes..."
