@@ -19,8 +19,8 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in self.BACKEND_CORS_ORIGINS.split(',')]
         return self.BACKEND_CORS_ORIGINS
     OPENAPI_CLIENT_ID: str = ""
-    AZURE_TENANT_ID: str = Field(alias="AZURE_TENANT_ID")
-    AZURE_CLIENT_ID: str = Field(alias="AZURE_CLIENT_ID")
+    AZURE_TENANT_ID: str | None = Field(default=None, alias="AZURE_TENANT_ID")
+    AZURE_CLIENT_ID: str | None = Field(default=None, alias="AZURE_CLIENT_ID")
     AZURE_CLIENT_SECRET: str | None = Field(default=None, alias="AZURE_CLIENT_SECRET")
     OIDC_ISSUER: str | None = Field(default=None, alias="OIDC_ISSUER")
     OIDC_AUTH_URL: str | None = Field(default=None, alias="OIDC_AUTH_URL")
@@ -40,14 +40,18 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def SCOPE_NAME(self) -> str:
-        return f'api://{self.AZURE_CLIENT_ID}/{self.SCOPE_DESCRIPTION}'
+        if self.AZURE_CLIENT_ID:
+            return f'api://{self.AZURE_CLIENT_ID}/{self.SCOPE_DESCRIPTION}'
+        return ''
 
     @computed_field
     @property
     def SCOPES(self) -> dict:
-        return {
-            self.SCOPE_NAME: self.SCOPE_DESCRIPTION,
-        }
+        if self.SCOPE_NAME:
+            return {
+                self.SCOPE_NAME: self.SCOPE_DESCRIPTION,
+            }
+        return {}
 
 
 
