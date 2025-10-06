@@ -1,5 +1,6 @@
 from pydantic import AnyHttpUrl, Field, computed_field, field_validator, ConfigDict
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 
 class Settings(BaseSettings):
@@ -9,13 +10,14 @@ class Settings(BaseSettings):
         case_sensitive=True,
     )
     #Update this to load from env
-    # Changed to list[str] to avoid AnyHttpUrl validation issues with wildcards
-    BACKEND_CORS_ORIGINS: list[str] = [
-        'http://localhost:8000',
-        'http://127.0.0.1:8000',
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-    ]
+    # Use str type and parse manually to avoid Pydantic list parsing issues
+    BACKEND_CORS_ORIGINS: str = 'http://localhost:8000,http://127.0.0.1:8000,http://localhost:5173,http://127.0.0.1:5173'
+    
+    def get_cors_origins(self) -> list[str]:
+        """Parse CORS origins from comma-separated string"""
+        if isinstance(self.BACKEND_CORS_ORIGINS, str):
+            return [origin.strip() for origin in self.BACKEND_CORS_ORIGINS.split(',')]
+        return self.BACKEND_CORS_ORIGINS
     OPENAPI_CLIENT_ID: str = ""
     AZURE_TENANT_ID: str = Field(alias="AZURE_TENANT_ID")
     AZURE_CLIENT_ID: str = Field(alias="AZURE_CLIENT_ID")
@@ -34,14 +36,6 @@ class Settings(BaseSettings):
     OIDC_REDIRECT_URI: str | None = Field(default=None, alias="OIDC_REDIRECT_URI")
     APP_ID: str = Field(alias="APP_ID")
     MONGODB_URI: str = Field(default="mongodb://localhost:27017", alias="MONGODB_URI")
-
-    @field_validator('BACKEND_CORS_ORIGINS', mode='before')
-    @classmethod
-    def parse_cors_origins(cls, v):
-        if isinstance(v, str):
-            # Split comma-separated string into list
-            return [origin.strip() for origin in v.split(',')]
-        return v
 
     @computed_field
     @property
