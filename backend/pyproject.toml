@@ -3,7 +3,7 @@ name = "fast-azure"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10,<3.11"  # Motor 2.x requires Python <3.11 (asyncio.coroutine removed in 3.11)
 dependencies = [
     "fastapi-azure-auth>=5.2.0",
     "fastapi[standard]>=0.117.1",
