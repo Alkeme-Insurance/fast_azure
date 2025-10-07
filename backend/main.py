@@ -17,7 +17,9 @@ from backend.utils.indexes import ensure_indexes
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async with mongo_lifespan():
-        await azure_scheme.openid_config.load_config()
+        # Only load Azure AD config if tenant ID is provided
+        if settings.AZURE_TENANT_ID:
+            await azure_scheme.openid_config.load_config()
         await seed_initial_data()
         await ensure_indexes()
         yield
