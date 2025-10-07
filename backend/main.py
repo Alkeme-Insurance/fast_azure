@@ -65,6 +65,12 @@ if settings.BACKEND_CORS_ORIGINS:
 
 
 
+@app.get("/health")
+async def health():
+    """Health check endpoint for Kubernetes probes (no auth required)"""
+    return {"status": "healthy"}
+
+
 @app.get("/", dependencies=[Security(azure_scheme)])
 async def root():
     return {"message": "Hello Bigger Applications!"}
