@@ -30,6 +30,11 @@ spec:
             configMapKeyRef:
               name: fastazure-config
               key: VITE_API_BASE_URL
+        - name: VITE_DEV_NO_AUTH
+          valueFrom:
+            configMapKeyRef:
+              name: fastazure-config
+              key: VITE_DEV_NO_AUTH
         - name: VITE_AZURE_CLIENT_ID
           valueFrom:
             secretKeyRef:
