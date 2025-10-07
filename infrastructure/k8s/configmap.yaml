@@ -12,5 +12,5 @@ data:
   VITE_API_BASE_URL: "http://backend-service:8000"
   VITE_WS_BASE: "ws://backend-service:8000"
   VITE_METRICS_SOURCE: "synth"
-  VITE_DEV_NO_AUTH: "false"  # Enable Azure AD in production
+  VITE_DEV_NO_AUTH: "true"  # Disable Azure AD (set to "false" when Azure AD is configured)
 
