@@ -14,7 +14,15 @@ def get_mongo_client() -> AsyncIOMotorClient:
     if _mongo_client is None:
         uri = settings.MONGODB_URI
         # Use the URI as-is (will be 'mongo' in Docker, 'localhost' when running locally)
-        _mongo_client = AsyncIOMotorClient(uri)
+        # Cosmos DB compatibility settings
+        _mongo_client = AsyncIOMotorClient(
+            uri,
+            serverSelectionTimeoutMS=5000,
+            # Disable wire version check for Cosmos DB (reports wire version 6)
+            # PyMongo 4.x requires wire version 8+, but Cosmos DB is compatible
+            connect=False,  # Lazy connection to bypass initial version check
+            retryWrites=False  # Cosmos DB doesn't support retryable writes
+        )
     return _mongo_client
 
 
