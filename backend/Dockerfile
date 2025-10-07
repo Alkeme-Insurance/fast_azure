@@ -16,8 +16,8 @@ COPY backend/uv.lock* ./
 # Install uv
 RUN pip install uv
 
-# Install dependencies
-RUN uv sync --frozen --no-cache
+# Install dependencies (no lock file, will resolve fresh)
+RUN uv sync --no-cache
 
 # Copy application code (context is root, copy backend/ to backend/ subdirectory for module structure)
 COPY backend/ ./backend/
