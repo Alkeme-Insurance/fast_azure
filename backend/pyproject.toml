@@ -10,5 +10,6 @@ dependencies = [
     "pydantic>=2.11.9",
     "pydantic-settings>=2.11.0",
     "motor>=2.5.0,<3.0.0",  # Motor 2.x for PyMongo 3.x compatibility
-    "pymongo[srv]>=3.13.0,<4.0.0",  # PyMongo 3.x for Cosmos DB compatibility
+    "pymongo>=3.13.0,<4.0.0",  # PyMongo 3.x for Cosmos DB wire version 6 compatibility
+    "dnspython>=2.0.0",  # DNS support for MongoDB connection strings
 ]
