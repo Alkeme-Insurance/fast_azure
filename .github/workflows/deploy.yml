@@ -130,17 +130,25 @@ jobs:
             --file backend/Dockerfile \
             .
 
+      - name: Get Frontend Service IP
+        id: frontend-ip
+        run: |
+          FRONTEND_IP=$(kubectl get svc -n fastazure frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          echo "FRONTEND_IP=$FRONTEND_IP" >> $GITHUB_OUTPUT
+          echo "Frontend IP: $FRONTEND_IP"
+
       - name: Build and Push Frontend Image
         run: |
           # Use GitHub secrets for build-time env vars
           # Build with ACR (supports build args)
           # NOTE: NOT passing Azure secrets so DEV_MODE_NO_AUTH works (msalConfig won't initialize)
+          # Use the frontend IP for API calls (browser will access via this public IP)
           az acr build \
             --registry ${{ env.ACR_NAME }} \
             --image fastazure-frontend:${{ github.sha }} \
             --image fastazure-frontend:latest \
             --file frontend/Dockerfile \
-            --build-arg VITE_API_BASE_URL=http://backend-service:8000 \
+            --build-arg VITE_API_BASE_URL=http://${{ steps.frontend-ip.outputs.FRONTEND_IP }}/api \
             --build-arg VITE_DEV_NO_AUTH=true \
             .
 
