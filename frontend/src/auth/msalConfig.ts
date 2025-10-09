@@ -31,7 +31,17 @@ const msalConfig: Configuration = {
 // ONLY create PublicClientApplication if NOT in dev mode
 // This prevents crypto_nonexistent error when Azure AD is disabled
 export const pca = DEV_MODE 
-	? ({} as PublicClientApplication) // Mock object for dev mode
+	? ({
+			initialize: async () => Promise.resolve(),
+			handleRedirectPromise: async () => Promise.resolve(null),
+			getActiveAccount: () => null,
+			getAllAccounts: () => [],
+			loginRedirect: async () => Promise.resolve(),
+			logoutRedirect: async () => Promise.resolve(),
+			acquireTokenSilent: async () => Promise.reject(new Error('dev_mode_no_auth')),
+			acquireTokenRedirect: async () => Promise.resolve(),
+			setActiveAccount: () => {},
+	  } as unknown as PublicClientApplication) // Mock object for dev mode
 	: new PublicClientApplication(msalConfig);
 
 
