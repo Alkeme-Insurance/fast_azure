@@ -38,24 +38,44 @@ function extractUserFromAccount(account: AccountInfo | null | undefined, result?
 	};
 }
 
-export const InternalAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Dev mode provider - no MSAL hooks
+const DevAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+	const [status] = useState<AuthStatus>('authenticated');
+	const [user] = useState<AuthUser | null>({
+		displayName: 'Dev User',
+		name: 'Dev User',
+		preferred_username: 'dev@localhost',
+	});
+
+	const login = useCallback(async () => {
+		console.log('[DevMode] Login called - no-op');
+	}, []);
+
+	const logout = useCallback(async () => {
+		console.log('[DevMode] Logout called - no-op');
+	}, []);
+
+	const getAccessToken = useCallback(async () => {
+		console.log('[DevMode] getAccessToken called - returning mock token');
+		return 'dev-mode-mock-token';
+	}, []);
+
+	const value = useMemo<AuthContextValue>(
+		() => ({ status, user, login, logout, getAccessToken }),
+		[status, user, login, logout, getAccessToken]
+	);
+
+	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+// Production auth provider - uses MSAL hooks
+const ProdAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 	const isAuthenticated = useIsAuthenticated();
 	const msal = useMsal();
 	const [status, setStatus] = useState<AuthStatus>('idle');
 	const [user, setUser] = useState<AuthUser | null>(null);
 
 	useEffect(() => {
-		// Dev mode: skip authentication
-		if (DEV_MODE_NO_AUTH) {
-			setUser({
-				displayName: 'Dev User',
-				name: 'Dev User',
-				preferred_username: 'dev@localhost',
-			});
-			setStatus('authenticated');
-			return;
-		}
-
 		setStatus('loading');
 		// Attempt silent token to determine session state
 		msal.instance
@@ -127,9 +147,15 @@ export const InternalAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 };
 
 export const AppAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+	// Dev mode: use simple provider without MSAL
+	if (DEV_MODE_NO_AUTH) {
+		return <DevAuthProvider>{children}</DevAuthProvider>;
+	}
+	
+	// Production: wrap with MsalProvider
 	return (
 		<MsalProvider instance={pca}>
-			<InternalAuthProvider>{children}</InternalAuthProvider>
+			<ProdAuthProvider>{children}</ProdAuthProvider>
 		</MsalProvider>
 	);
 };
@@ -139,5 +165,3 @@ export function useAuth(): AuthContextValue {
 	if (!ctx) throw new Error('useAuth must be used within AppAuthProvider');
 	return ctx;
 }
-
-
