@@ -150,12 +150,13 @@ jobs:
           # Build with ACR (supports build args)
           # NOTE: NOT passing Azure secrets so DEV_MODE_NO_AUTH works (msalConfig won't initialize)
           # Use the frontend IP for API calls (browser will access via this public IP)
+          # Note: NGINX proxy will add /api, so base URL is just the IP
           az acr build \
             --registry ${{ env.ACR_NAME }} \
             --image fastazure-frontend:${{ github.sha }} \
             --image fastazure-frontend:latest \
             --file frontend/Dockerfile \
-            --build-arg VITE_API_BASE_URL=http://${{ steps.frontend-ip.outputs.FRONTEND_IP }}/api \
+            --build-arg VITE_API_BASE_URL=http://${{ steps.frontend-ip.outputs.FRONTEND_IP }} \
             --build-arg VITE_DEV_NO_AUTH=true \
             .
 
