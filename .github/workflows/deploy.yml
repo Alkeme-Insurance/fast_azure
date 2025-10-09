@@ -121,6 +121,20 @@ jobs:
           echo "key_vault_name=$KEY_VAULT_NAME" >> $GITHUB_OUTPUT
           echo "✅ Key Vault: $KEY_VAULT_NAME"
 
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AKS_CLUSTER }} \
+            --overwrite-existing
+
+      - name: Get Frontend Service IP
+        id: frontend-ip
+        run: |
+          FRONTEND_IP=$(kubectl get svc -n fastazure frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          echo "FRONTEND_IP=$FRONTEND_IP" >> $GITHUB_OUTPUT
+          echo "Frontend IP: $FRONTEND_IP"
+
       - name: Build and Push Backend Image
         run: |
           az acr build \
@@ -129,13 +143,6 @@ jobs:
             --image fastazure-backend:latest \
             --file backend/Dockerfile \
             .
-
-      - name: Get Frontend Service IP
-        id: frontend-ip
-        run: |
-          FRONTEND_IP=$(kubectl get svc -n fastazure frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          echo "FRONTEND_IP=$FRONTEND_IP" >> $GITHUB_OUTPUT
-          echo "Frontend IP: $FRONTEND_IP"
 
       - name: Build and Push Frontend Image
         run: |
@@ -151,13 +158,6 @@ jobs:
             --build-arg VITE_API_BASE_URL=http://${{ steps.frontend-ip.outputs.FRONTEND_IP }}/api \
             --build-arg VITE_DEV_NO_AUTH=true \
             .
-
-      - name: Get AKS Credentials
-        run: |
-          az aks get-credentials \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.AKS_CLUSTER }} \
-            --overwrite-existing
 
       - name: Setup Kubernetes Namespace and Resources
         run: |
