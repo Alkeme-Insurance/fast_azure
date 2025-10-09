@@ -134,15 +134,13 @@ jobs:
         run: |
           # Use GitHub secrets for build-time env vars
           # Build with ACR (supports build args)
+          # NOTE: NOT passing Azure secrets so DEV_MODE_NO_AUTH works (msalConfig won't initialize)
           az acr build \
             --registry ${{ env.ACR_NAME }} \
             --image fastazure-frontend:${{ github.sha }} \
             --image fastazure-frontend:latest \
             --file frontend/Dockerfile \
             --build-arg VITE_API_BASE_URL=http://backend-service:8000 \
-            --build-arg VITE_AZURE_CLIENT_ID="${{ secrets.VITE_AZURE_CLIENT_ID }}" \
-            --build-arg VITE_AZURE_TENANT_ID="${{ secrets.VITE_AZURE_TENANT_ID }}" \
-            --build-arg VITE_AZURE_API_SCOPE="${{ secrets.VITE_AZURE_API_SCOPE }}" \
             --build-arg VITE_DEV_NO_AUTH=true \
             .
 
