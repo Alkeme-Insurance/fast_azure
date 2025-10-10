@@ -5,8 +5,8 @@ metadata:
   namespace: fastazure
 data:
   # Backend config
-  # Allow frontend service and ingress (update ingress URL after deployment)
-  BACKEND_CORS_ORIGINS: "http://frontend-service,http://frontend-service:80,*,http://40.67.155.178"
+  # Allow frontend service and ingress (HTTPS via Azure Front Door)
+  BACKEND_CORS_ORIGINS: "http://frontend-service,http://frontend-service:80,*,https://fastazure-endpoint-e0fghtc3e5e9dthn.a01.azurefd.net"
   
   # Frontend config (Vite build-time vars)
   VITE_API_BASE_URL: "http://backend-service:8000"

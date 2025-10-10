@@ -128,12 +128,13 @@ jobs:
             --name ${{ env.AKS_CLUSTER }} \
             --overwrite-existing
 
-      - name: Get Frontend Service IP
-        id: frontend-ip
+      - name: Get Frontend URL
+        id: frontend-url
         run: |
-          FRONTEND_IP=$(kubectl get svc -n fastazure frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          echo "FRONTEND_IP=$FRONTEND_IP" >> $GITHUB_OUTPUT
-          echo "Frontend IP: $FRONTEND_IP"
+          # Use Azure Front Door URL for HTTPS support
+          FRONTEND_URL="https://fastazure-endpoint-e0fghtc3e5e9dthn.a01.azurefd.net"
+          echo "FRONTEND_URL=$FRONTEND_URL" >> $GITHUB_OUTPUT
+          echo "✅ Frontend URL: $FRONTEND_URL"
 
       - name: Build and Push Backend Image
         run: |
@@ -154,11 +155,11 @@ jobs:
             --image fastazure-frontend:${{ github.sha }} \
             --image fastazure-frontend:latest \
             --file frontend/Dockerfile \
-            --build-arg VITE_API_BASE_URL=http://${{ steps.frontend-ip.outputs.FRONTEND_IP }} \
+            --build-arg VITE_API_BASE_URL=${{ steps.frontend-url.outputs.FRONTEND_URL }}/api \
             --build-arg VITE_AZURE_CLIENT_ID="${{ secrets.VITE_AZURE_CLIENT_ID }}" \
             --build-arg VITE_AZURE_TENANT_ID="${{ secrets.VITE_AZURE_TENANT_ID }}" \
             --build-arg VITE_AZURE_API_SCOPE="${{ secrets.VITE_AZURE_API_SCOPE }}" \
-            --build-arg VITE_AZURE_REDIRECT_URI=http://${{ steps.frontend-ip.outputs.FRONTEND_IP }} \
+            --build-arg VITE_AZURE_REDIRECT_URI=${{ steps.frontend-url.outputs.FRONTEND_URL }} \
             .
 
       - name: Setup Kubernetes Namespace and Resources
