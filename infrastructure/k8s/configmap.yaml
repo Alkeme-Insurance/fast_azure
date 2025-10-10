@@ -6,11 +6,10 @@ metadata:
 data:
   # Backend config
   # Allow frontend service and ingress (update ingress URL after deployment)
-  BACKEND_CORS_ORIGINS: "http://frontend-service,http://frontend-service:80,*"
+  BACKEND_CORS_ORIGINS: "http://frontend-service,http://frontend-service:80,*,http://40.67.155.178"
   
   # Frontend config (Vite build-time vars)
   VITE_API_BASE_URL: "http://backend-service:8000"
   VITE_WS_BASE: "ws://backend-service:8000"
   VITE_METRICS_SOURCE: "synth"
-  VITE_DEV_NO_AUTH: "true"  # Disable Azure AD (set to "false" when Azure AD is configured)
 
