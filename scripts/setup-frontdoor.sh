@@ -126,23 +126,23 @@ az afd origin create \
 echo -e "${GREEN}✅ Origin added${NC}"
 echo ""
 
-echo -e "${BLUE}═══ Step 5: Creating Route ═══${NC}"
+echo -e "${BLUE}═══ Step 5: Associating Endpoint with Domain ═══${NC}"
 
-ROUTE_NAME="fastazure-route"
-
+# Associate the endpoint's default domain
 az afd route create \
   --profile-name "$FRONTDOOR_NAME" \
   --resource-group "$RESOURCE_GROUP" \
   --endpoint-name "$ENDPOINT_NAME" \
-  --route-name "$ROUTE_NAME" \
+  --route-name "default-route" \
   --origin-group "$ORIGIN_GROUP_NAME" \
   --supported-protocols Http Https \
   --https-redirect Enabled \
   --forwarding-protocol HttpOnly \
+  --link-to-default-domain Enabled \
   --patterns-to-match "/*" \
   --enabled-state Enabled
 
-echo -e "${GREEN}✅ Route created (HTTP → HTTPS redirect enabled)${NC}"
+echo -e "${GREEN}✅ Route created with default domain (HTTP → HTTPS redirect enabled)${NC}"
 echo ""
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════════════╗${NC}"
