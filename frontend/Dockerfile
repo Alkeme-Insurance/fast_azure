@@ -19,8 +19,8 @@ ARG VITE_AZURE_REDIRECT_URI=http://localhost:3000
 ARG VITE_AZURE_POST_LOGOUT_REDIRECT_URI=http://localhost:3000
 ARG VITE_AZURE_API_SCOPE
 
-# Development Mode
-ARG VITE_DEV_NO_AUTH=true
+# Development Mode (default false - auth enabled)
+ARG VITE_DEV_NO_AUTH=false
 
 # Set environment variables for build (Vite reads these at build time)
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
