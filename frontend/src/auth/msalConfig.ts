@@ -24,24 +24,66 @@ const msalConfig: Configuration = {
 	},
 	cache: {
 		cacheLocation: 'sessionStorage',
-		storeAuthStateInCookie: false,
+		storeAuthStateInCookie: true, // Use cookies as fallback for HTTP
+	},
+	system: {
+		allowNativeBroker: false, // Disable native broker which requires crypto
+		loggerOptions: {
+			logLevel: 3, // Error
+		},
 	},
 };
 
-// ONLY create PublicClientApplication if NOT in dev mode
-// This prevents crypto_nonexistent error when Azure AD is disabled
-export const pca = DEV_MODE 
-	? ({
+// Create PublicClientApplication with error handling
+// If crypto API is not available (HTTP instead of HTTPS), provide a graceful fallback
+let pcaInstance: PublicClientApplication;
+
+try {
+	if (DEV_MODE) {
+		// Dev mode: use mock
+		pcaInstance = {
 			initialize: async () => Promise.resolve(),
 			handleRedirectPromise: async () => Promise.resolve(null),
 			getActiveAccount: () => null,
 			getAllAccounts: () => [],
-			loginRedirect: async () => Promise.resolve(),
+			loginRedirect: async () => {
+				console.warn('[Dev Mode] Login redirect disabled');
+				return Promise.resolve();
+			},
 			logoutRedirect: async () => Promise.resolve(),
 			acquireTokenSilent: async () => Promise.reject(new Error('dev_mode_no_auth')),
 			acquireTokenRedirect: async () => Promise.resolve(),
 			setActiveAccount: () => {},
-	  } as unknown as PublicClientApplication) // Mock object for dev mode
-	: new PublicClientApplication(msalConfig);
+		} as unknown as PublicClientApplication;
+	} else {
+		// Production: try to create real PCA
+		pcaInstance = new PublicClientApplication(msalConfig);
+	}
+} catch (error) {
+	console.error('[MSAL] Failed to initialize PublicClientApplication:', error);
+	console.warn('[MSAL] Falling back to mock authentication. This typically happens when:');
+	console.warn('  - Running over HTTP instead of HTTPS (crypto API requires secure context)');
+	console.warn('  - Browser does not support Web Crypto API');
+	console.warn('  - Content Security Policy blocks crypto operations');
+	console.warn('[MSAL] For production, please use HTTPS or configure Azure AD for HTTP (not recommended)');
+	
+	// Fallback to mock
+	pcaInstance = {
+		initialize: async () => Promise.resolve(),
+		handleRedirectPromise: async () => Promise.resolve(null),
+		getActiveAccount: () => null,
+		getAllAccounts: () => [],
+		loginRedirect: async () => {
+			alert('Authentication requires HTTPS. Please access the application over HTTPS or contact your administrator.');
+			return Promise.resolve();
+		},
+		logoutRedirect: async () => Promise.resolve(),
+		acquireTokenSilent: async () => Promise.reject(new Error('crypto_not_available')),
+		acquireTokenRedirect: async () => Promise.resolve(),
+		setActiveAccount: () => {},
+	} as unknown as PublicClientApplication;
+}
+
+export const pca = pcaInstance;
 
 
