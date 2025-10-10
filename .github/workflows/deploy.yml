@@ -155,7 +155,7 @@ jobs:
             --image fastazure-frontend:${{ github.sha }} \
             --image fastazure-frontend:latest \
             --file frontend/Dockerfile \
-            --build-arg VITE_API_BASE_URL=${{ steps.frontend-url.outputs.FRONTEND_URL }}/api \
+            --build-arg VITE_API_BASE_URL=${{ steps.frontend-url.outputs.FRONTEND_URL }} \
             --build-arg VITE_AZURE_CLIENT_ID="${{ secrets.VITE_AZURE_CLIENT_ID }}" \
             --build-arg VITE_AZURE_TENANT_ID="${{ secrets.VITE_AZURE_TENANT_ID }}" \
             --build-arg VITE_AZURE_API_SCOPE="${{ secrets.VITE_AZURE_API_SCOPE }}" \
