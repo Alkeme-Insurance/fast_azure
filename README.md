@@ -21,17 +21,20 @@ A modern full-stack application built with FastAPI (backend) and React + TypeScr
 
 ## ⚙️ Configuration Management
 
-All Azure and deployment configuration is centralized in `config/azure-config.json`:
+All Azure and deployment configuration is managed through environment variables:
 
 ```bash
-# View current configuration
-cat config/azure-config.json | jq .
+# Copy the example file
+cp .env.example .env
+
+# Edit with your values
+nano .env
 
 # Sync configuration to GitHub secrets
-./scripts/sync-config.sh
+./scripts/sync-github-secrets.sh
 ```
 
-See [`config/README.md`](config/README.md) for detailed configuration documentation.
+See [`.env.example`](.env.example) for all available configuration options.
 
 ## 📋 Quick Start
 

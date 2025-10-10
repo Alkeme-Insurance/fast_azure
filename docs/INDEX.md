@@ -42,16 +42,16 @@ Complete documentation for the Fast Azure full-stack application.
 
 ## 📁 Configuration
 
-For centralized configuration management, see:
-- [`config/README.md`](../config/README.md) - Configuration management guide
-- [`config/azure-config.json`](../config/azure-config.json) - Centralized settings
+Configuration is managed through environment variables:
+- [`.env.example`](../.env.example) - Template with all configuration options
+- Create `.env` from the example and customize for your environment
 
 ## 🔧 Scripts
 
 Available automation scripts:
 - `./scripts/setup-frontdoor.sh` - Deploy Azure Front Door with SSL
 - `./scripts/configure-azure-ad-spa.sh` - Configure Azure AD as SPA
-- `./scripts/sync-config.sh` - Sync configuration to GitHub secrets
+- `./scripts/sync-github-secrets.sh` - Sync .env to GitHub secrets
 
 ## 🎯 Quick Links
 

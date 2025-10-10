@@ -12,7 +12,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-CONFIG_FILE="${PROJECT_ROOT}/config/azure-config.json"
+ENV_FILE="${PROJECT_ROOT}/.env"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -26,17 +26,25 @@ echo -e "${BLUE}║  Azure Front Door Setup for HTTPS                           
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Check if jq is installed
-if ! command -v jq &> /dev/null; then
-    echo -e "${RED}❌ jq is not installed. Please install it: sudo apt-get install jq${NC}"
+# Check if .env file exists
+if [ ! -f "$ENV_FILE" ]; then
+    echo -e "${RED}❌ .env file not found!${NC}"
+    echo "Please create .env from .env.example:"
+    echo "  cp .env.example .env"
     exit 1
 fi
 
-# Read configuration
-RESOURCE_GROUP=$(jq -r '.azure.resourceGroup' "$CONFIG_FILE")
-FRONTEND_IP=$(jq -r '.deployment.frontendPublicIp' "$CONFIG_FILE")
-TENANT_ID=$(jq -r '.azure.tenantId' "$CONFIG_FILE")
-FRONTEND_CLIENT_ID=$(jq -r '.azureAd.frontend.clientId' "$CONFIG_FILE")
+# Load environment variables
+set -a
+source "$ENV_FILE"
+set +a
+
+# Read configuration from environment
+RESOURCE_GROUP="$AZURE_RESOURCE_GROUP"
+# Get the current frontend IP from AKS (will be replaced by Front Door)
+FRONTEND_IP=$(kubectl get svc -n fastazure frontend-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "40.67.155.178")
+TENANT_ID="$AZURE_TENANT_ID"
+FRONTEND_CLIENT_ID="$VITE_AZURE_CLIENT_ID"
 
 FRONTDOOR_NAME="fastazure-fd"
 BACKEND_ADDRESS="${FRONTEND_IP}"
@@ -157,12 +165,13 @@ echo "1. Update Azure AD Redirect URI:"
 echo "   az ad app update --id $FRONTEND_CLIENT_ID \\"
 echo "     --web-redirect-uris \"https://$ENDPOINT_HOSTNAME\" \"http://localhost:3000\""
 echo ""
-echo "2. Update config/azure-config.json:"
-echo "   - Change frontendPublicIp to: $ENDPOINT_HOSTNAME"
-echo "   - Add protocol: \"https\""
+echo "2. Update .env file:"
+echo "   sed -i \"s|FRONTEND_URL=.*|FRONTEND_URL=https://$ENDPOINT_HOSTNAME|\" .env"
+echo "   sed -i \"s|VITE_AZURE_REDIRECT_URI=.*|VITE_AZURE_REDIRECT_URI=https://$ENDPOINT_HOSTNAME|\" .env"
+echo "   sed -i \"s|VITE_API_BASE_URL=.*|VITE_API_BASE_URL=https://$ENDPOINT_HOSTNAME|\" .env"
 echo ""
-echo "3. Run sync script:"
-echo "   ./scripts/sync-config.sh"
+echo "3. Sync to GitHub secrets:"
+echo "   ./scripts/sync-github-secrets.sh"
 echo ""
 echo "4. Test your application:"
 echo "   https://$ENDPOINT_HOSTNAME"

@@ -10,7 +10,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-CONFIG_FILE="${PROJECT_ROOT}/config/azure-config.json"
+ENV_FILE="${PROJECT_ROOT}/.env"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -24,20 +24,22 @@ echo -e "${BLUE}║  Configure Azure AD App as SPA                              
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Check if jq is installed
-if ! command -v jq &> /dev/null; then
-    echo -e "${RED}❌ jq is not installed. Please install it: sudo apt-get install jq${NC}"
+# Check if .env file exists
+if [ ! -f "$ENV_FILE" ]; then
+    echo -e "${RED}❌ .env file not found!${NC}"
+    echo "Please create .env from .env.example:"
+    echo "  cp .env.example .env"
     exit 1
 fi
 
-# Read configuration
-FRONTEND_CLIENT_ID=$(jq -r '.azureAd.frontend.clientId' "$CONFIG_FILE")
-FRONTEND_URL=$(jq -r '.deployment.frontendUrl // .deployment.frontendPublicIp' "$CONFIG_FILE")
+# Load environment variables
+set -a
+source "$ENV_FILE"
+set +a
 
-# Ensure HTTPS if Front Door URL
-if [[ "$FRONTEND_URL" == *"azurefd.net"* ]] && [[ "$FRONTEND_URL" != https://* ]]; then
-    FRONTEND_URL="https://$FRONTEND_URL"
-fi
+# Read configuration from environment
+FRONTEND_CLIENT_ID="$VITE_AZURE_CLIENT_ID"
+FRONTEND_URL="$FRONTEND_URL"
 
 echo -e "${GREEN}📖 Configuration:${NC}"
 echo "  Client ID:     $FRONTEND_CLIENT_ID"
