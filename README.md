@@ -19,6 +19,20 @@ A modern full-stack application built with FastAPI (backend) and React + TypeScr
 - **Authentication**: Azure AD (MSAL.js)
 - **Deployment**: Docker + Docker Compose
 
+## ⚙️ Configuration Management
+
+All Azure and deployment configuration is centralized in `config/azure-config.json`:
+
+```bash
+# View current configuration
+cat config/azure-config.json | jq .
+
+# Sync configuration to GitHub secrets
+./scripts/sync-config.sh
+```
+
+See [`config/README.md`](config/README.md) for detailed configuration documentation.
+
 ## 📋 Quick Start
 
 ### Option 1: Using the Setup Script (Recommended)
